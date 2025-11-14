@@ -537,6 +537,294 @@ git push -u origin claude/claude-md-mhyifajyydv2kwaf-01RitCh541mcZbfHbpV3LGYj
 
 ---
 
+## RAG System Architecture (Critical Understanding!)
+
+### Two Models Required
+
+**RAG systems require TWO separate models:**
+
+```
+┌─────────────────────────────────────────────────┐
+│                RAG System                        │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  ① Embedding Model (Retrieval)                 │
+│     • Converts documents to vectors             │
+│     • Enables semantic search                   │
+│     • Example: intfloat/multilingual-e5-large   │
+│                                                 │
+│  ② Generation Model (LLM)                       │
+│     • Reads retrieved context                   │
+│     • Generates natural language answers        │
+│     • Example: Qwen2.5-7B-Instruct             │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+### RAG Pipeline Flow
+
+**Preparation (Indexing):**
+```python
+Documents → [Embedding Model] → Vectors → Vector DB
+```
+
+**Query (Retrieval + Generation):**
+```python
+Question → [Embedding Model] → Query Vector
+                                    ↓
+                         Vector DB Search
+                                    ↓
+                         Retrieved Documents
+                                    ↓
+Documents + Question → [LLM] → Answer
+```
+
+---
+
+## Fine-tuning Strategy Comparison
+
+### Assignment Requirements (Critical!)
+
+**From Assignment Document (Line 7, 50-56):**
+- ✅ **LLM Fine-tuning: REQUIRED** ("RAG 태스크에 특화된 Fine-tuning 수행")
+- ❓ **Embedding Fine-tuning: OPTIONAL** (only "선정" required, not fine-tuning)
+
+### Option 1: LLM Only Fine-tuning (Required)
+
+**What to fine-tune:** Generation model (Qwen2.5-7B)
+**What to use as-is:** Pre-trained embedding model
+
+**Cost:** $3-5
+**Effect:** Improved answer generation, domain understanding
+**Risk:** Low (meets requirements)
+
+**Training Data Format:**
+```python
+{
+  "instruction": "주어진 문서 내용을 바탕으로 질문에 답하세요.",
+  "context": "[Retrieved document content from PDF]",
+  "question": "의림지는 어디에 있나요?",
+  "answer": "의림지는 제천시 송학면 의림대로 47길 7에 위치해 있습니다."
+}
+```
+
+### Option 2: Embedding + LLM Fine-tuning (Advanced)
+
+**What to fine-tune:** Both models
+**Cost:** $5-8
+**Effect:** Better retrieval (5-10%) + Better generation
+**Risk:** Medium (exceeds requirements, but impressive)
+
+### Performance Impact Research (2024-2025)
+
+**Embedding Fine-tuning Impact:**
+- +5-10% retrieval accuracy improvement
+- More domain-relevant document retrieval
+- Costs: ~$2-3 on RunPod
+
+**LLM Fine-tuning Impact:**
+- Better domain-specific answer generation
+- Improved context understanding
+- More natural, informative responses
+- Costs: ~$3-5 on RunPod
+
+**Combined (RAFT approach):**
+- +12-18% overall system improvement
+- Best results but higher cost
+
+### Recommendation
+
+**For this assignment:**
+
+**Conservative Approach:**
+```
+• Embedding: Use pre-trained (multilingual-e5-large)
+• LLM: Fine-tune Qwen2.5-7B
+• Cost: $3-5
+• Meets requirements clearly
+```
+
+**Impressive Approach:**
+```
+• Embedding: Fine-tune on domain data
+• LLM: Fine-tune on RAG tasks
+• Cost: $5-8
+• Exceeds requirements, shows initiative
+• Better for report differentiation
+```
+
+---
+
+## Budget Planning ($15 RunPod Credit)
+
+### GPU Pricing Reference (Approximate)
+
+- **RTX 3090:** ~$0.30/hour
+- **RTX 4090:** ~$0.50/hour
+- **A40:** ~$0.60/hour
+- **A100 40GB:** ~$1.50/hour
+
+### Budget Allocation (LLM Only)
+
+```
+Baseline Evaluation:     1 hour  × $0.50 = $0.50
+LLM Fine-tuning:       3-5 hours × $0.50 = $1.50-2.50
+Fine-tuned Evaluation:   1 hour  × $0.50 = $0.50
+Debugging/Iteration:     2 hours × $0.50 = $1.00
+────────────────────────────────────────────────
+Total:                  7-9 hours         = $3.50-4.50
+Remaining:                                = $10.50-11.50 ✓
+```
+
+### Budget Allocation (Both Models)
+
+```
+Embedding Fine-tuning:   2-3 hours × $0.50 = $1.00-1.50
+LLM Fine-tuning:         3-5 hours × $0.50 = $1.50-2.50
+Baseline Evaluation:     1 hour    × $0.50 = $0.50
+Fine-tuned Evaluation:   1 hour    × $0.50 = $0.50
+Debugging/Iteration:     2 hours   × $0.50 = $1.00
+────────────────────────────────────────────────
+Total:                   9-12 hours        = $4.50-6.00
+Remaining:                                 = $9.00-10.50 ✓
+```
+
+**Both strategies leave sufficient budget for experimentation!**
+
+### Recommended Model Sizes
+
+**For $15 budget:**
+
+```
+✅ Recommended: Qwen2.5-7B
+   • Korean performance: Excellent
+   • Training time: 3-5 hours (QLoRA)
+   • Memory: Fits RTX 4090 with QLoRA
+   • Cost: ~$2-3
+
+✅ Also Good: Qwen2.5-3B
+   • Faster training: 2-3 hours
+   • Lower cost: ~$1-2
+   • Still good Korean support
+   • More budget for experiments
+
+⚠️  Ambitious: Qwen2.5-14B
+   • Better performance
+   • Longer training: 5-8 hours
+   • Cost: ~$3-5
+   • Less room for mistakes
+```
+
+### Dataset Size Recommendation
+
+**For efficient training:**
+
+```
+Minimum:  100 Q&A pairs (too small, may underfit)
+Optimal:  150-200 Q&A pairs ← RECOMMENDED
+Maximum:  300-500 Q&A pairs (diminishing returns)
+
+Rationale:
+• 28-page PDF = limited source material
+• 150-200 pairs = good coverage without overfitting
+• Diverse question types more important than quantity
+```
+
+---
+
+## Real-world RAG Dataset Examples
+
+### Allganize Korean RAG Evaluation Dataset
+
+**Reference:** https://huggingface.co/datasets/allganize/RAG-Evaluation-Dataset-KO
+
+**Structure:**
+```python
+{
+  "domain": "finance",  # 금융, 공공, 의료, 법률, 커머스
+  "question": "시중은행과 지방은행의 차이는?",
+  "target_answer": "[Detailed answer from context]",
+  "target_file_name": "지방은행의_시중은행_전환.pdf",
+  "target_page_no": 4,
+  "context_type": "paragraph"  # or "table"
+}
+```
+
+**Key Insights for Our Dataset:**
+1. Include source document and page number
+2. Mark context type (paragraph/table/list)
+3. Domain classification helpful for analysis
+4. Answers should be grounded in specific context
+
+### Training Data Format (Instruction Tuning)
+
+**Format for LLM fine-tuning:**
+
+```python
+# Example 1: Factual Question
+{
+  "instruction": "제천 관광 정보를 바탕으로 질문에 답하세요.",
+  "context": """의림지
+제천시 송학면 의림대로 47길 7
+의림지는 제천 10경 중 하나로, 고대 수리시설의 원형을 간직한
+역사적 장소입니다. 삼한시대에 축조된 것으로 알려져 있으며...""",
+  "question": "의림지는 어디에 있나요?",
+  "answer": "의림지는 제천시 송학면 의림대로 47길 7에 위치해 있습니다."
+}
+
+# Example 2: Recommendation Question
+{
+  "instruction": "제천 관광 정보를 바탕으로 질문에 답하세요.",
+  "context": """제천 1박 2일 코스
+1일차: 의림지 → 청풍호반 케이블카 → 청풍문화재단지
+2일차: 옥순봉 출렁다리 → 슬로시티 수산...""",
+  "question": "제천 1박 2일 여행 코스를 추천해주세요",
+  "answer": "제천 1박 2일 코스는 다음과 같습니다. 1일차에는 의림지,
+청풍호반 케이블카, 청풍문화재단지를 방문하고, 2일차에는 옥순봉
+출렁다리와 슬로시티 수산을 방문하는 것을 추천합니다."
+}
+
+# Example 3: No Information Available (Important!)
+{
+  "instruction": "제천 관광 정보를 바탕으로 질문에 답하세요.",
+  "context": "의림지는 제천 10경 중 하나로...",
+  "question": "의림지 와이파이 비밀번호는 뭔가요?",
+  "answer": "죄송합니다. 제공된 관광 정보에는 의림지 와이파이
+비밀번호에 대한 내용이 없습니다."
+}
+```
+
+**Why This Format:**
+- ✅ Teaches model to use context (not memorize facts)
+- ✅ Prevents hallucination (answers only from context)
+- ✅ Improves relevance (extract relevant info only)
+- ✅ Handles "I don't know" scenarios
+
+### Question Type Diversity
+
+**Create varied question types:**
+
+```python
+patterns = [
+    # 1. Direct factual (40%)
+    ("의림지 주소는?", "제천시 송학면..."),
+
+    # 2. Descriptive (30%)
+    ("의림지는 어떤 곳인가요?", "제천 10경 중 하나로..."),
+
+    # 3. Recommendation (20%)
+    ("가을에 가기 좋은 곳은?", "백운권 힐링 코스를..."),
+
+    # 4. Comparison (5%)
+    ("시티투어와 관광택시 차이는?", "시티투어는 정해진 코스..."),
+
+    # 5. No answer (5%)
+    ("의림지 주차요금은?", "제공된 정보에는 주차요금이...")
+]
+```
+
+---
+
 ## Notes for Future AI Assistants
 
 This repository represents a well-defined assignment with clear success criteria. When working on this project:
