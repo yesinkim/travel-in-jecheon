@@ -730,6 +730,148 @@ Rationale:
 • Diverse question types more important than quantity
 ```
 
+### Practical Dataset Planning for Jecheon Tourism PDF
+
+**Source Material Analysis:**
+```
+Jecheon Tourism Brochure:
+• 28 pages total
+• 12,122 characters
+• Content breakdown:
+  - Preparation info (6 pages): Tourist cards, city tours, taxis
+  - Tourist sites (12 pages): Uirimji, Cheongpung Lake, etc. (10-15 sites)
+  - Travel courses (4 pages): 1-day/2-day courses, themed routes
+  - Accommodation/Products (6 pages): Resorts, local specialties
+```
+
+**Recommended Dataset Size: 120-150 Q&A pairs**
+
+**Category Distribution (140 pairs example):**
+```
+1. Tourist Sites (60 pairs, 43%)
+   - Major sites: 12 sites × 5 questions = 60
+   - Questions per site:
+     * Location/address
+     * Description/features
+     * Historical background
+     * Nearby attractions
+     * Access/facilities
+
+2. Transportation/Access (25 pairs, 18%)
+   - City tours: 5
+   - Tourist taxis: 5
+   - Transportation info: 5
+   - Parking/access: 5
+   - Mobile QR services: 5
+
+3. Travel Courses (20 pairs, 14%)
+   - 1-day courses: 5
+   - 2-day courses: 5
+   - Themed courses (healing/religious/cultural): 10
+
+4. Accommodation/Food/Shopping (20 pairs, 14%)
+   - Accommodations: 8
+   - Restaurants/specialties: 8
+   - Shopping info: 4
+
+5. Practical Information (10 pairs, 7%)
+   - Tourist resident card: 3
+   - Incentives: 2
+   - Festival info: 3
+   - Miscellaneous: 2
+
+6. Comparison/Recommendation Questions (5 pairs, 4%)
+   - City tour vs tourist taxi
+   - Seasonal recommendations
+   - Family travel suggestions
+   - Day trip recommendations
+```
+
+**Quality vs Quantity Guidelines:**
+
+✅ **Good approach (140 high-quality pairs):**
+- Each question answerable from PDF
+- Clear context and specific information
+- Diverse question types
+
+❌ **Bad approach (forcing 200+ pairs):**
+- Questions with no answers in PDF
+- Redundant or trivial questions
+- Quality degradation
+
+### Train/Test/Validation Split Strategy
+
+**Recommended Approach: Train/Test with Early Stopping**
+
+```
+Total: 140 Q&A pairs
+
+Split:
+• Train: 110 pairs (78.6%)
+• Test:  30 pairs (21.4%)
+
+Validation Strategy:
+• Don't create separate validation set (data is limited)
+• Use early stopping during training
+• Automatically use 10-15% of train for validation
+```
+
+**Alternative: Three-way Split (if needed)**
+```
+• Train:      100 pairs (71.4%)
+• Validation:  20 pairs (14.3%)
+• Test:        20 pairs (14.3%)
+
+Pros: Standard ML practice, allows hyperparameter tuning
+Cons: Reduces training data (may underfit)
+```
+
+**Stratified Splitting (Recommended):**
+```python
+# Maintain question type distribution across splits
+
+Question type distribution:
+- Factual (40%): 56 pairs → Train: 44, Test: 12
+- Descriptive (30%): 42 pairs → Train: 33, Test: 9
+- Recommendation (20%): 28 pairs → Train: 22, Test: 6
+- Comparison (5%): 7 pairs → Train: 5, Test: 2
+- No answer (5%): 7 pairs → Train: 6, Test: 1
+
+This ensures both splits represent all question types.
+```
+
+**Implementation with Early Stopping:**
+```python
+from transformers import TrainingArguments
+
+training_args = TrainingArguments(
+    num_train_epochs=3,
+    evaluation_strategy="steps",
+    eval_steps=50,
+    save_strategy="steps",
+    save_steps=50,
+    load_best_model_at_end=True,  # Early stopping
+    metric_for_best_model="eval_loss",
+)
+```
+
+**Usage in Assignment:**
+
+1. **Baseline Evaluation:**
+   - Use only Test (30 pairs)
+   - No training data used
+   - Measure zero-shot performance
+
+2. **Fine-tuning:**
+   - Train on 110 pairs
+   - Monitor with early stopping
+   - Final evaluation on Test (30 pairs)
+
+3. **Comparison:**
+   - Same 30 Test pairs for both
+   - Report: Baseline X% → Fine-tuned Y%
+   - Include 3+ qualitative examples
+
 ---
 
 ## Real-world RAG Dataset Examples
