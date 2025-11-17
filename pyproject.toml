@@ -23,6 +23,7 @@ dependencies = [
     "py-zerox>=0.0.7",
     "google-generativeai>=0.8.0",
     "runpod>=1.7.13",
+    "anthropic>=0.73.0",
 ]
 
 [tool.uv.workspace]
