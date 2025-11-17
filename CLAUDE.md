@@ -24,13 +24,22 @@ This repository contains an AI position assignment for **GoodGangLabs**, focusin
 ```
 /home/user/goodganglabs/
 ├── .git/                          # Git version control
-├── .gitignore                     # Ignores: .DS_Store
+├── .gitignore                     # Ignores: .DS_Store, large files
+├── .python-version                # Python version specification
 ├── CLAUDE.md                      # This file - AI assistant guide
 ├── AI 포지션 과제 안내 2aa86229d43581a688b7c2ed89434dd5.md
 │                                  # Assignment requirements (Korean)
-└── assets/                        # Resource files
-    ├── Runpod설정방법.pdf         # RunPod GPU setup guide (15 pages)
-    └── 제천시관광정보책자.pdf      # Source PDF for RAG (12MB tourism brochure)
+├── README.md                      # Project README
+├── main.py                        # Main entry point
+├── pyproject.toml                 # Project dependencies (uv)
+├── uv.lock                        # Dependency lock file
+├── data/                          # Data directory
+│   └── raw/                       # Raw source data
+│       └── 제천시관광정보책자.pdf  # Source PDF for RAG (12MB tourism brochure)
+├── docs/                          # Documentation files
+│   └── Runpod설정방법.pdf         # RunPod GPU setup guide (15 pages)
+└── notebook/                      # Jupyter notebooks
+    └── test-models.ipynb          # Model testing notebook
 ```
 
 ### Expected Directory Structure (To Be Created)
@@ -111,7 +120,7 @@ This repository contains an AI position assignment for **GoodGangLabs**, focusin
 
 #### Resources
 - **GPU Platform:** RunPod (credit: `c1w0wzucm2khx7qk0br9`)
-- **Setup Guide:** `assets/Runpod설정방법.pdf`
+- **Setup Guide:** `docs/Runpod설정방법.pdf`
 - **Reference Dataset:** https://huggingface.co/datasets/allganize/RAG-Evaluation-Dataset-KO
 - **Contact:** dasol@goodganglabs.com
 
@@ -459,8 +468,8 @@ tokenizer.push_to_hub("username/korean-rag-finetuned")
 
 ### Important Files
 - **Assignment:** `AI 포지션 과제 안내 2aa86229d43581a688b7c2ed89434dd5.md:1`
-- **Source Data:** `assets/제천시관광정보책자.pdf`
-- **RunPod Guide:** `assets/Runpod설정방법.pdf`
+- **Source Data:** `data/raw/제천시관광정보책자.pdf`
+- **RunPod Guide:** `docs/Runpod설정방법.pdf`
 
 ### Important Links
 - **Reference Dataset:** https://huggingface.co/datasets/allganize/RAG-Evaluation-Dataset-KO
@@ -551,6 +560,6 @@ The assignment tests both technical skills and ability to communicate complex ML
 
 ---
 
-**Last Updated:** 2025-11-14
-**Version:** 1.0
+**Last Updated:** 2025-11-15
+**Version:** 1.1
 **Maintained for:** AI Assistants working on GoodGangLabs RAG Assignment
