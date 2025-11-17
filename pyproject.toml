@@ -23,6 +23,12 @@ dependencies = [
     "py-zerox>=0.0.7",
     "google-generativeai>=0.8.0",
     "runpod>=1.7.13",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "torch>=2.0.0",
+    "huggingface-hub>=0.36.0",
+    "hf-transfer>=0.1.9",
+    "accelerate>=1.11.0",
 ]
 
 [tool.uv.workspace]
