@@ -1,0 +1,36 @@
+{
+  "model": "Qwen2.5-1.5B",
+  "questions": [
+    "제천은 어느 도에 소속되어 있나요?",
+    "K-pop을 대표하는 아티스트를 알려주세요.",
+    "오늘 날씨는 어때?",
+    "세종대왕은 어떤 업적을 남겼나요?",
+    "삼국 시대의 세 나라는 각각 어떤 특징이 있었나요?",
+    "한글의 역사에 대해 마크다운 형식으로 작성해줘",
+    "오늘 회의 언제할거야?' 문장을 정중한 비즈니스 이메일 형식으로 바꿔줘.",
+    "python의 리스트 형식으로 5개 단어를 아무거나 나열해줘",
+    "마크다운 형식을 사용하지 말고, 키토빵 만드는 방법을 설명해줘"
+  ],
+  "answers": [
+    "system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.\nuser\n제천은 어느 도에 소속되어 있나요?\nassistant\n제천은 경상북도에 속해 있습니다.",
+    "system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.\nuser\nK-pop을 대표하는 아티스트를 알려주세요.\nassistant\nK-pop의 대표적인 아티스트들로는:\n\n1. BTS (방탄소년단)\n2. BLACKPINK (블랙핑크)\n3. EXO (엑소)\n4. TWICE (트와이스)\n5. VIXX (비키)\n6. Red Velvet (레드벨벳)\n7. NCT (네이트)\n8. GOT7 (고트리)\n9. 2AM (아이즈원)\n10. SHINee (신세계)\n\n이들은 K-pop의 가장 큰 인기와 팬덤을 형성하고 있으며, 다양한 장르의 음악을 만들어내며 많은 사랑을 받고 있습니다. K-pop은 한국의 문화적 특성을 잘 표현하며, 세계적으로도 인기를 얻고 있는 음악 장르입니다.",
+    "system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.\nuser\n오늘 날씨는 어때?\nassistant\n죄송합니다, 저는 실시간 정보를 제공하지 못합니다. 현재의 날씨 정보는 직접적인 기상청 웹사이트나 앱을 통해 확인하실 수 있습니다.",
+    "system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.\nuser\n세종대왕은 어떤 업적을 남겼나요?\nassistant\n세종대왕은 조선의 세 번째 왕으로서 많은 업적을 남겼습니다. 그의 주요 업적들로는 다음과 같습니다:\n\n1. 1432년부터 1450년까지 18년 동안 세종대왕은 조선의 제일장(大寧)을 건립했습니다.\n\n2. 1446년에 청계천을 개통하여 서울의 물길을 확보하였습니다.\n\n3. 1447년에는 천문관을 설립하여 천문학 연구를 시작하였습니다.\n\n4. 1454년에는 천문관에서 발견한 별이 '천사'라는 이름을 붙였습니다.\n\n5. 1455년에는 천문관에서 발견한 별이 '천경'이라는 이름을 붙였습니다.\n\n6. 1459년에는 천문관에서 발견한 별이 '천명'이라는 이름을 붙였습니다.\n\n7. 1460년에는 천문관에서 발견한 별이 '천주'라는 이름을 붙였습니다.\n\n8. 1461년에는 천문관에서 발견한 별이 '천지'라는 이름을 붙였습니다.\n\n9. 1462년에는 천문관에서 발견한 별이 '천하'라는 이름을 붙였습니다.\n\n10. 1463년에는 천문관에서 발견한 별이 '천민'이라는 이름을 붙였습니다.\n\n11. 1464년에는 천문관에서 발견한 별이 '천국'이라는 이름을 붙였습니다.\n\n12. 1465년에는 천문관에서 발견한 별이 '천상'이라는 이름을 붙였습니다.\n\n13. 1466년에는 천문관에서 발견한 별이 '천지연'이라는 이름을 붙였습니다.\n\n14. 1467년에는 천문관에서 발견한 별이 '천하연'이라는 이름을 붙였습니다.\n\n15. 1468년에는 천문관에서 발견한 별이 '천민연'이라는 이름을 붙였습니다.\n\n16. 1469년에는 천문관에서 발견한 별이 '천국연'이라는 이름을 붙였습니다.\n\n17. 1470년에는 천문관에서 발견한 별이 '천상연'이라는 이름을 붙였습니다.\n\n18. 1471년에는 천문관에서 발견한 별이 '천지연'이라는 이름을 붙였습니다.\n\n19. 1472년에는 천문관에서 발견한 별이 '천하연'이라는 이름을 붙였습니다.\n\n20. 1473년에는 천문관에서 발견한 별이 '천민연'이라는 이름을 붙였습니다.\n\n21. 1474년에는 천문관에서 발견한 별이 '천국연'이라는 이름을 붙였습니다.\n\n22. 1475년에는 천문관에서 발견한 별이 '천상연'이라는 이름을 붙였습니다.\n\n23. 1476년에는 천문관에서 발견한 별이 '천지연'이라는 이름을 붙였습니다.\n\n24. 1477년에는 천문관에서 발견한 별이 '천하연'이라는 이름을 붙였습니다.\n\n25. 1478년에는 천문관에서 발견한 별이 '천민연'이라는 이름을 붙였습니다.\n\n26. 1479년에는 천문관에서 발견한 별이 '천국연'이라는 이름을 붙였습니다.\n\n27. 1480년에는 천문관에서 발견한 별이 '천상연'이라는 이름을 붙였습니다.\n\n28. 1481년에는 천문관에서 발견한 별이 '천지연'이라는 이름을 붙였습니다.\n\n29. 1482년에는 천문관에서 발견한 별이 '천하연'이라는 이름을 붙였습니다.\n\n30. 1483년에는 천문관에서 발견한 별이 '천민연'이라는 이름을 붙였습니다.\n\n31. 1484년에는 천문관에서 발견한",
+    "system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.\nuser\n삼국 시대의 세 나라는 각각 어떤 특징이 있었나요?\nassistant\n삼국시대는 중국历史上非常重要的一个时期，主要分为三国时期（220年-280年），其中的三个国家分别是魏、蜀、吴。每个国家都有其独特的特点和历史贡献。\n\n1. 魏：魏国是三国时期的第一大国，由曹丕建立。魏国在政治上实行中央集权制度，并且在经济上发展了农业和手工业。魏国还建立了强大的军事力量，对后来的中国历史产生了深远的影响。\n\n2. 蜀：蜀国是由刘备建立的，位于今天的四川地区。蜀国在文化上有着浓厚的儒家思想，重视教育和学术研究。同时，蜀国也注重农业生产，发展了水利灌溉技术。蜀国在外交上与周边国家保持着良好的关系。\n\n3. 吴：吴国是由孙权建立的，位于今天的江苏地区。吴国在军事上实力强大，多次击败魏国和蜀国。吴国在文化上以佛教为主导，同时也吸收了其他文化的精华。吴国在科技方面也有一定的成就，如发明了指南针等。\n\n这三个国家虽然都属于三国时期，但各自的特点和历史贡献都是不同的。三国时期的中国社会经历了从分裂到统一的过程，这为后来的中国历史奠定了基础。",
+    "system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.\nuser\n한글의 역사에 대해 마크다운 형식으로 작성해줘\nassistant\n물론입니다! 한글의 역사에 대한 마크다운 형식을 다음과 같이 작성할 수 있습니다:\n\n# 한글의 역사\n\n## 초기 단계 (기원전 18세기)\n- **기원전 18세기**: 한글이 처음 사용된 시대로 추정됩니다.\n- **기원전 18세기 이후**: 한글은 전통적인 방언과 문화를 기반으로 발전했습니다.\n\n## 고려시대 (9세기 - 14세기)\n- **고려시대**: 한글의 발전이 빠르게 이루어졌습니다.\n- **고려말**: 이时期的 한글은 현재의 한글과 유사한 형태로 발전했습니다.\n\n## 조선시대 (14세기 - 19세기)\n- **조선시대**: 한글의 발전이 더욱 가속화되었습니다.\n- **조선말**: 이时期的 한글은 현존하는 가장 오래된 한글 문자체계였습니다.\n\n## 현대 시대 (20세기 이후)\n- **현대 시대**: 한글은 세계적으로 인기를 얻으며 발전했습니다.\n- **한글 교육 확산**: 학교에서 한글을 공부하게 되었습니다.\n- **한글 기술 개발**: 컴퓨터와 관련된 한글 기술도 발전했습니다.\n\n## 참고문헌\n- [한국어 Wikipedia](https://ko.wikipedia.org/wiki/%EB%AC%B8%EC%A7%80%ED%95%9C%EA%B3%A0)\n\n이렇게 작성하면 한글의 역사가 명확하게 구분되고 이해하기 쉬울 것입니다.",
+    "system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.\nuser\n오늘 회의 언제할거야?' 문장을 정중한 비즈니스 이메일 형식으로 바꿔줘.\nassistant\n\"안녕하세요,\n\n오늘 회의는 오전 10시에 진행될 예정입니다.\n\n감사합니다.\"\n\n이 문장은 정중하고 비즈니스용으로 작성되었습니다. 회의 일정을 알려주고 감사의 의미를 담았습니다.",
+    "system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.\nuser\npython의 리스트 형식으로 5개 단어를 아무거나 나열해줘\nassistant\nHere is an example of how you can create and print a list in Python with five random words:\n\n```python\nimport random\n\n# Define the list of possible words\nwords = [\"apple\", \"banana\", \"cherry\", \"date\", \"elderberry\"]\n\n# Generate a random index for each word\nrandom_indices = [random.randint(0, len(words) - 1) for _ in range(5)]\n\n# Create the final list using the generated indices\nresult_list = [words[index] for index in random_indices]\n\nprint(result_list)\n```\n\nThis code will output something like this (each time it runs):\n```python\n['banana', 'cherry', 'date', 'elderberry', 'apple']\n```\n\nEach element in the `result_list` is randomly selected from the `words` list. The number of elements in the list (`len(result_list)` should always be 5).",
+    "system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.\nuser\n마크다운 형식을 사용하지 말고, 키토빵 만드는 방법을 설명해줘\nassistant\n물론입니다! 키토빵을 만들기 위한 기본적인 재료와 단계를 간단하게 설명하겠습니다:\n\n1. 재료:\n   - 설탕 20g\n   - 우유 50ml\n   - 요구르트 30g\n   - 파스타 소스 10ml\n   - 빵 1개 (선택사항)\n   - 채소나 샐러드 (선택사항)\n\n2. 단계:\n   1) 설탕과 우유를 섞어 얇게 불립니다.\n   2) 요구르트와 파스타 소스를 섞어 양념을 합니다.\n   3) 빵을 잘라서 얇게 만듭니다.\n   4) 양념을 넣은 빵에 설탕을 부어 양념을 바릅니다.\n   5) 채소나 샐러드를 추가하여 조리합니다.\n\n이렇게 하면 맛있는 키토빵을 만들 수 있습니다!"
+  ],
+  "timestamps": [
+    0.343705,
+    4.296858,
+    0.954478,
+    24.400118,
+    6.431328,
+    8.748955,
+    1.458237,
+    4.417374,
+    5.779708
+  ]
+}

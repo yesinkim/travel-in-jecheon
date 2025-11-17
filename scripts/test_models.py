@@ -21,9 +21,9 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 
 # 프로젝트 루트 디렉토리
-PROJECT_ROOT = Path(__file__).parent.parent
-DATA_DIR = PROJECT_ROOT / "data" / "processed"
-RESULTS_DIR = PROJECT_ROOT / "results"
+PROJECT_ROOT = Path.cwd()
+DATA_DIR = PROJECT_ROOT / "compare_model" / "data"
+RESULTS_DIR = PROJECT_ROOT / "compare_model" / "results"
 
 # 디렉토리 생성
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -35,18 +35,30 @@ SIMPLE_QUESTIONS = [
     "K-pop을 대표하는 아티스트를 알려주세요.",
     "오늘 날씨는 어때?",
     "세종대왕은 어떤 업적을 남겼나요?",
-    "삼국 시대의 세 나라는 각각 어떤 특징이 있었나요?"
+    "삼국 시대의 세 나라는 각각 어떤 특징이 있었나요?",
+    "한글의 역사에 대해 마크다운 형식으로 작성해줘",
+    "오늘 회의 언제할거야?' 문장을 정중한 비즈니스 이메일 형식으로 바꿔줘.",
+    "python의 리스트 형식으로 5개 단어를 아무거나 나열해줘",
+    "마크다운 형식을 사용하지 말고, 키토빵 만드는 방법을 설명해줘",
 ]
 
-# 모델 설정
+# 모델 설정 (크기 순으로 정렬)
 MODEL_CONFIGS = {
-    "Kanana-2.1B": {
-        "name": "kakaocorp/kanana-nano-2.1b-instruct",
-        "system_prompt": "You are a helpful AI assistant developed by Kakao.",
+    "Gemma-2-9B": {
+        "name": "google/gemma-2-9b-it",
+        "system_prompt": "You are a helpful assistant.",
         "dtype": torch.bfloat16,
-        "trust_remote_code": True,
-        "device_map": None,
-        "use_eos_token_id": False
+        "trust_remote_code": None,
+        "device_map": "auto",
+        "use_eos_token_id": False,
+    },
+    "Kanana-1.5-8B": {
+        "name": "kakaocorp/kanana-1.5-8b-instruct-2505",
+        "system_prompt": "You are a helpful AI assistant developed by Kakao.",
+        "dtype": torch.float16,
+        "trust_remote_code": None,
+        "device_map": "auto",
+        "use_eos_token_id": False,
     },
     "EXAONE-3.5-7.8B": {
         "name": "LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct",
@@ -54,7 +66,7 @@ MODEL_CONFIGS = {
         "dtype": torch.bfloat16,
         "trust_remote_code": True,
         "device_map": "auto",
-        "use_eos_token_id": True
+        "use_eos_token_id": True,
     },
     "Qwen2.5-7B": {
         "name": "Qwen/Qwen2.5-7B-Instruct",
@@ -62,7 +74,23 @@ MODEL_CONFIGS = {
         "dtype": "auto",
         "trust_remote_code": None,
         "device_map": "auto",
-        "use_eos_token_id": False
+        "use_eos_token_id": False,
+    },
+    "Kanana-nano-2.1b": {
+        "name": "kakaocorp/kanana-nano-2.1b-instruct",
+        "system_prompt": "You are a helpful AI assistant developed by Kakao.",
+        "dtype": torch.bfloat16,
+        "trust_remote_code": True,
+        "device_map": None,
+        "use_eos_token_id": False,
+    },
+    "Qwen2.5-1.5B": {
+        "name": "Qwen/Qwen2.5-1.5B-Instruct",
+        "system_prompt": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.",
+        "dtype": "auto",
+        "trust_remote_code": None,
+        "device_map": "auto",
+        "use_eos_token_id": False,
     },
     "EXAONE-4.0-1.2B": {
         "name": "LGAI-EXAONE/EXAONE-4.0-1.2B",
@@ -70,8 +98,8 @@ MODEL_CONFIGS = {
         "dtype": "bfloat16",
         "trust_remote_code": None,
         "device_map": "auto",
-        "use_eos_token_id": False
-    }
+        "use_eos_token_id": False,
+    },
 }
 
 
@@ -340,8 +368,8 @@ def main():
     parser.add_argument(
         '--max-tokens',
         type=int,
-        default=256,
-        help='생성할 최대 토큰 수 (기본: 256)'
+        default=1024,
+        help='생성할 최대 토큰 수 (기본: 1024)'
     )
     parser.add_argument(
         '--device',
