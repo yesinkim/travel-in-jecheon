@@ -45,14 +45,15 @@ class TrainingDataFormatter:
             qa: Q&A pair with distractors
             format_style: "xml" or "baseline"
         """
-        # Collect all documents (correct + distractors)
+        # Collect all documents (correct + distractors) as structured list
         all_docs = []
 
         if qa["correct_doc"]:
             all_docs.append({
                 "doc_id": qa["correct_doc"]["doc_id"],
                 "title": qa["correct_doc"]["title"],
-                "content": qa["correct_doc"]["content"],
+                "filename": qa["correct_doc"].get("filename", ""),
+                "content": qa["correct_doc"]["text"],
                 "is_correct": True,
             })
 
@@ -60,32 +61,19 @@ class TrainingDataFormatter:
             all_docs.append({
                 "doc_id": distractor["doc_id"],
                 "title": distractor["title"],
-                "content": distractor["content"],
+                "filename": distractor.get("filename", ""),
+                "content": distractor["text"],
                 "is_correct": False,
             })
 
         # Shuffle documents to randomize position of correct doc
         random.shuffle(all_docs)
 
-        # Format documents based on style
-        if format_style == "xml":
-            documents_text = self._format_documents_xml(all_docs)
-        else:
-            documents_text = self._format_documents_baseline(all_docs)
-
-        # Create instruction
-        instruction = "제천 관광 정보를 바탕으로 질문에 답하세요. 제공된 문서들 중 관련 있는 정보만 사용하여 정확하게 답변해주세요."
-
-        # Create full prompt
-        full_prompt = f"{instruction}\n\n{documents_text}\n\n질문: {qa['question']}"
-
-        # Format for instruction tuning (ChatML / Alpaca style)
+        # Format for training (documents as structured list)
         formatted = {
-            "instruction": instruction,
-            "documents": documents_text,
+            "documents": all_docs,  # List of document dicts
             "question": qa["question"],
             "answer": qa["answer"],
-            "full_prompt": full_prompt,
             "question_type": qa["question_type"],
             "difficulty": qa["difficulty"],
             "correct_doc_id": qa.get("correct_doc_id"),
@@ -122,26 +110,36 @@ class TrainingDataFormatter:
     def format_for_huggingface(self, qa: Dict[str, Any]) -> Dict[str, Any]:
         """
         Format Q&A pair for Hugging Face dataset upload.
-        Follows the Finetune-RAG dataset structure.
+        Follows the exact Finetune-RAG dataset structure.
         """
         # Get correct document
         correct_doc = qa.get("correct_doc")
+        distractors = qa["distractor_docs"]
 
-        # Get distractor documents (up to 2 for Finetune-RAG compatibility)
-        distractors = qa["distractor_docs"][:2]
-
-        hf_format = {
-            "question": qa["question"],
-            "answer": qa["answer"],
-            "content": correct_doc["content"] if correct_doc else "",
-            "filename": correct_doc["filename"] if correct_doc else "",
-            "fictitious_content1": distractors[0]["content"] if len(distractors) > 0 else "",
-            "fictitious_filename1": distractors[0]["filename"] if len(distractors) > 0 else "",
-            "fictitious_content2": distractors[1]["content"] if len(distractors) > 1 else "",
-            "fictitious_filename2": distractors[1]["filename"] if len(distractors) > 1 else "",
-            "question_type": qa["question_type"],
-            "difficulty": qa["difficulty"],
-        }
+        # If no correct doc (no_answer cases), use distractors for all content fields
+        if not correct_doc:
+            hf_format = {
+                "content": distractors[0]["text"] if len(distractors) > 0 else "",
+                "filename": distractors[0].get("filename", "") if len(distractors) > 0 else "",
+                "fictitious_filename1": distractors[1].get("filename", "") if len(distractors) > 1 else "",
+                "fictitious_content1": distractors[1]["text"] if len(distractors) > 1 else "",
+                "fictitious_filename2": distractors[2].get("filename", "") if len(distractors) > 2 else "",
+                "fictitious_content2": distractors[2]["text"] if len(distractors) > 2 else "",
+                "question": qa["question"],
+                "answer": qa["answer"],
+            }
+        else:
+            # Normal case: correct doc + 2 distractors
+            hf_format = {
+                "content": correct_doc["text"],
+                "filename": correct_doc.get("filename", ""),
+                "fictitious_filename1": distractors[0].get("filename", "") if len(distractors) > 0 else "",
+                "fictitious_content1": distractors[0]["text"] if len(distractors) > 0 else "",
+                "fictitious_filename2": distractors[1].get("filename", "") if len(distractors) > 1 else "",
+                "fictitious_content2": distractors[1]["text"] if len(distractors) > 1 else "",
+                "question": qa["question"],
+                "answer": qa["answer"],
+            }
 
         return hf_format
 
@@ -207,20 +205,26 @@ class TrainingDataFormatter:
             print(f"  - {q_type}: {count} ({percentage:.1f}%)")
 
         # Sample formatted data
-        print("\n📝 Sample Formatted Data (Instruction Tuning):")
+        print("\n📝 Sample Formatted Data (Training):")
         sample = instruction_data[0]
-        print(f"\nInstruction: {sample['instruction']}")
-        print(f"\nDocuments (first 200 chars): {sample['documents'][:200]}...")
+        print(f"\nDocuments: {len(sample['documents'])} documents")
+        for i, doc in enumerate(sample['documents'], 1):
+            print(f"  Doc {i}: {doc['title']} (ID: {doc['doc_id']}, is_correct: {doc['is_correct']})")
+            print(f"    Filename: {doc['filename']}")
+            print(f"    Content (first 80 chars): {doc['content'][:80]}...")
         print(f"\nQuestion: {sample['question']}")
         print(f"Answer: {sample['answer'][:100]}...")
 
         print("\n📝 Sample Formatted Data (Hugging Face):")
         hf_sample = hf_data[0]
-        print(f"\nQuestion: {hf_sample['question']}")
-        print(f"Answer: {hf_sample['answer'][:100]}...")
+        print(f"\nContent (first 100 chars): {hf_sample['content'][:100]}...")
         print(f"Filename: {hf_sample['filename']}")
         print(f"Fictitious Filename 1: {hf_sample['fictitious_filename1']}")
+        print(f"Fictitious Content 1 (first 60 chars): {hf_sample['fictitious_content1'][:60]}...")
         print(f"Fictitious Filename 2: {hf_sample['fictitious_filename2']}")
+        print(f"Fictitious Content 2 (first 60 chars): {hf_sample['fictitious_content2'][:60]}...")
+        print(f"Question: {hf_sample['question']}")
+        print(f"Answer: {hf_sample['answer'][:80]}...")
 
 
 def main():
@@ -242,7 +246,7 @@ def main():
     print(f"✅ Loaded {len(qa_data)} Q&A pairs with distractors")
 
     # Format all data
-    instruction_data, hf_data = formatter.format_all_data(format_style="xml")
+    instruction_data, hf_data = formatter.format_all_data(format_style="baseline")
 
     # Save formatted data
     formatter.save_to_jsonl(instruction_data, output_instruction_path)
