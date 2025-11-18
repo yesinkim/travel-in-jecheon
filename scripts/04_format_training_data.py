@@ -73,19 +73,11 @@ class TrainingDataFormatter:
         else:
             documents_text = self._format_documents_baseline(all_docs)
 
-        # Create instruction
-        instruction = "제천 관광 정보를 바탕으로 질문에 답하세요. 제공된 문서들 중 관련 있는 정보만 사용하여 정확하게 답변해주세요."
-
-        # Create full prompt
-        full_prompt = f"{instruction}\n\n{documents_text}\n\n질문: {qa['question']}"
-
-        # Format for instruction tuning (ChatML / Alpaca style)
+        # Format for training (instruction will be added during training)
         formatted = {
-            "instruction": instruction,
             "documents": documents_text,
             "question": qa["question"],
             "answer": qa["answer"],
-            "full_prompt": full_prompt,
             "question_type": qa["question_type"],
             "difficulty": qa["difficulty"],
             "correct_doc_id": qa.get("correct_doc_id"),
@@ -221,9 +213,8 @@ class TrainingDataFormatter:
             print(f"  - {q_type}: {count} ({percentage:.1f}%)")
 
         # Sample formatted data
-        print("\n📝 Sample Formatted Data (Instruction Tuning):")
+        print("\n📝 Sample Formatted Data (Training):")
         sample = instruction_data[0]
-        print(f"\nInstruction: {sample['instruction']}")
         print(f"\nDocuments (first 200 chars): {sample['documents'][:200]}...")
         print(f"\nQuestion: {sample['question']}")
         print(f"Answer: {sample['answer'][:100]}...")
