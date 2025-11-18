@@ -1,11 +1,13 @@
 """
-Hybrid Markdown Creator: Correct OCR errors with PyMuPDF
+Hybrid Markdown Creator: Correct OCR errors and add missing sections
 
 Strategy:
 1. Use pyzerox MD as base (most complete, has image text)
 2. Find OCR errors by comparing with PyMuPDF TXT
 3. Replace erroneous sections with accurate PyMuPDF text
-4. Keep unique content from pyzerox (image extractions)
+4. Find missing sections in pyzerox (present in PyMuPDF)
+5. Add missing sections at appropriate positions
+6. Keep unique content from pyzerox (image extractions)
 
 Input:
 - data/processed/제천시관광정보책자.md (pyzerox - complete but has errors)
@@ -246,6 +248,115 @@ class HybridMarkdownCreator:
         self.corrections = errors
         return corrected
 
+    def find_missing_sections(self) -> List[Dict]:
+        """Find sections present in PyMuPDF but missing in pyzerox."""
+        print("\n🔍 Searching for missing sections...")
+
+        missing = []
+
+        # Split both sources into sections
+        md_sections = self.split_by_keywords(self.md_content)
+        txt_sections = self.split_by_keywords(self.txt_cleaned)
+
+        # For each PyMuPDF section, check if it exists in pyzerox
+        for txt_sec in txt_sections:
+            found = False
+            txt_norm = self.normalize_for_comparison(txt_sec['content'])
+
+            # Skip if too short (likely noise)
+            if len(txt_norm) < 50:
+                continue
+
+            # Search for this section in pyzerox MD
+            for md_sec in md_sections:
+                md_norm = self.normalize_for_comparison(md_sec['content'])
+
+                # Check similarity
+                similarity = SequenceMatcher(None, txt_norm[:200], md_norm[:200]).ratio()
+
+                if similarity > 0.6:  # Found similar section
+                    found = True
+                    break
+
+            # If not found, it's missing
+            if not found and len(txt_sec['content'].strip()) > 100:
+                missing.append({
+                    'title': txt_sec['title'],
+                    'content': txt_sec['content'],
+                    'length': len(txt_sec['content'])
+                })
+
+        print(f"✅ Found {len(missing)} missing sections")
+
+        # Show summary
+        if missing:
+            print(f"\n📋 Missing sections summary:")
+            for i, sec in enumerate(missing[:10], 1):
+                print(f"   {i}. {sec['title']} ({sec['length']} chars)")
+            if len(missing) > 10:
+                print(f"   ... and {len(missing) - 10} more")
+
+        return missing
+
+    def find_insertion_point(self, missing_section: Dict, current_content: str) -> int:
+        """Find appropriate insertion point for a missing section."""
+        title = missing_section['title']
+
+        # Strategy 1: Find by keyword proximity
+        # Look for related keywords in the content
+        keywords = title.lower().split()
+
+        # Find positions where keywords appear
+        positions = []
+        for keyword in keywords:
+            if len(keyword) > 2:  # Skip short words
+                pattern = re.escape(keyword)
+                for match in re.finditer(pattern, current_content, re.IGNORECASE):
+                    positions.append(match.start())
+
+        if positions:
+            # Insert near the first occurrence of related keyword
+            avg_position = min(positions)
+            # Find nearest section break (double newline)
+            section_breaks = [m.start() for m in re.finditer(r'\n\n', current_content)]
+
+            # Find closest section break after the keyword
+            for break_pos in section_breaks:
+                if break_pos >= avg_position:
+                    return break_pos + 2  # After the double newline
+
+        # Strategy 2: Insert at the end if no good position found
+        return len(current_content)
+
+    def add_missing_sections(self, corrected_content: str, missing_sections: List[Dict]) -> str:
+        """Add missing sections to the corrected content."""
+        if not missing_sections:
+            return corrected_content
+
+        print(f"\n➕ Adding {len(missing_sections)} missing sections...")
+
+        enhanced = corrected_content
+        sections_added = 0
+
+        for section in missing_sections:
+            title = section['title']
+            content = section['content'].strip()
+
+            # Find insertion point
+            insert_pos = self.find_insertion_point(section, enhanced)
+
+            # Format section with proper markdown
+            formatted_section = f"\n\n## {title}\n\n{content}\n"
+
+            # Insert at position
+            enhanced = enhanced[:insert_pos] + formatted_section + enhanced[insert_pos:]
+            sections_added += 1
+
+            print(f"   ✅ Added: {title} ({section['length']} chars)")
+
+        print(f"\n✅ Added {sections_added} sections")
+        return enhanced
+
     def create_correction_report(self, output_path: str):
         """Create a detailed correction report."""
         output_path = Path(output_path)
@@ -276,7 +387,9 @@ class HybridMarkdownCreator:
 
     def create_corrected_markdown(self):
         """Main workflow to create corrected markdown."""
-        print("\n🚀 Creating Corrected Markdown (Hybrid Approach)...\n")
+        print("\n🚀 Creating Corrected & Enhanced Markdown (Hybrid Approach)...\n")
+        print("Step 1: OCR Error Correction")
+        print("Step 2: Missing Section Addition\n")
 
         # Read files
         self.read_files()
@@ -284,31 +397,53 @@ class HybridMarkdownCreator:
         # Clean PyMuPDF
         self.clean_pymupdf()
 
-        # Find OCR errors
+        # STEP 1: Find and fix OCR errors
+        print("\n" + "="*60)
+        print("STEP 1: OCR Error Correction")
+        print("="*60)
+
         errors = self.find_ocr_errors()
 
-        if not errors:
+        if errors:
+            # Apply OCR corrections
+            corrected_content = self.apply_corrections(errors)
+        else:
             print("\n✅ No OCR errors detected!")
-            return self.md_content
+            corrected_content = self.md_content
 
-        # Apply corrections
-        corrected_content = self.apply_corrections(errors)
+        # STEP 2: Find and add missing sections
+        print("\n" + "="*60)
+        print("STEP 2: Missing Section Addition")
+        print("="*60)
 
-        # Save corrected version
+        missing_sections = self.find_missing_sections()
+
+        if missing_sections:
+            # Add missing sections
+            enhanced_content = self.add_missing_sections(corrected_content, missing_sections)
+        else:
+            print("\n✅ No missing sections detected!")
+            enhanced_content = corrected_content
+
+        # Save enhanced version
         output_path = self.md_path.parent / "제천시관광정보책자_corrected.md"
         with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(corrected_content)
+            f.write(enhanced_content)
 
-        print(f"\n✅ Corrected markdown saved to: {output_path}")
-        print(f"   Original: {len(self.md_content)} chars")
-        print(f"   Corrected: {len(corrected_content)} chars")
-        print(f"   Difference: {len(corrected_content) - len(self.md_content)} chars")
+        print("\n" + "="*60)
+        print("FINAL RESULT")
+        print("="*60)
+        print(f"\n✅ Enhanced markdown saved to: {output_path}")
+        print(f"   Original (pyzerox):  {len(self.md_content):,} chars")
+        print(f"   After OCR fix:       {len(corrected_content):,} chars")
+        print(f"   After adding missing: {len(enhanced_content):,} chars")
+        print(f"   Total added:         +{len(enhanced_content) - len(self.md_content):,} chars")
 
         # Create report
         report_path = self.md_path.parent / "ocr_correction_report.txt"
         self.create_correction_report(report_path)
 
-        return corrected_content
+        return enhanced_content
 
 
 def main():
