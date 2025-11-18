@@ -45,13 +45,14 @@ class TrainingDataFormatter:
             qa: Q&A pair with distractors
             format_style: "xml" or "baseline"
         """
-        # Collect all documents (correct + distractors)
+        # Collect all documents (correct + distractors) as structured list
         all_docs = []
 
         if qa["correct_doc"]:
             all_docs.append({
                 "doc_id": qa["correct_doc"]["doc_id"],
                 "title": qa["correct_doc"]["title"],
+                "filename": qa["correct_doc"].get("filename", ""),
                 "content": qa["correct_doc"]["text"],
                 "is_correct": True,
             })
@@ -60,6 +61,7 @@ class TrainingDataFormatter:
             all_docs.append({
                 "doc_id": distractor["doc_id"],
                 "title": distractor["title"],
+                "filename": distractor.get("filename", ""),
                 "content": distractor["text"],
                 "is_correct": False,
             })
@@ -67,15 +69,9 @@ class TrainingDataFormatter:
         # Shuffle documents to randomize position of correct doc
         random.shuffle(all_docs)
 
-        # Format documents based on style
-        if format_style == "xml":
-            documents_text = self._format_documents_xml(all_docs)
-        else:
-            documents_text = self._format_documents_baseline(all_docs)
-
-        # Format for training (instruction will be added during training)
+        # Format for training (documents as structured list)
         formatted = {
-            "documents": documents_text,
+            "documents": all_docs,  # List of document dicts
             "question": qa["question"],
             "answer": qa["answer"],
             "question_type": qa["question_type"],
@@ -211,7 +207,11 @@ class TrainingDataFormatter:
         # Sample formatted data
         print("\n📝 Sample Formatted Data (Training):")
         sample = instruction_data[0]
-        print(f"\nDocuments (first 200 chars): {sample['documents'][:200]}...")
+        print(f"\nDocuments: {len(sample['documents'])} documents")
+        for i, doc in enumerate(sample['documents'], 1):
+            print(f"  Doc {i}: {doc['title']} (ID: {doc['doc_id']}, is_correct: {doc['is_correct']})")
+            print(f"    Filename: {doc['filename']}")
+            print(f"    Content (first 80 chars): {doc['content'][:80]}...")
         print(f"\nQuestion: {sample['question']}")
         print(f"Answer: {sample['answer'][:100]}...")
 
