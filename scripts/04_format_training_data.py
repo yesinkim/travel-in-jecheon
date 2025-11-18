@@ -114,7 +114,7 @@ class TrainingDataFormatter:
     def format_for_huggingface(self, qa: Dict[str, Any]) -> Dict[str, Any]:
         """
         Format Q&A pair for Hugging Face dataset upload.
-        Follows the Finetune-RAG dataset structure.
+        Follows the exact Finetune-RAG dataset structure.
         """
         # Get correct document
         correct_doc = qa.get("correct_doc")
@@ -123,30 +123,26 @@ class TrainingDataFormatter:
         # If no correct doc (no_answer cases), use distractors for all content fields
         if not correct_doc:
             hf_format = {
-                "question": qa["question"],
-                "answer": qa["answer"],
                 "content": distractors[0]["text"] if len(distractors) > 0 else "",
                 "filename": distractors[0].get("filename", "") if len(distractors) > 0 else "",
-                "fictitious_content1": distractors[1]["text"] if len(distractors) > 1 else "",
                 "fictitious_filename1": distractors[1].get("filename", "") if len(distractors) > 1 else "",
-                "fictitious_content2": distractors[2]["text"] if len(distractors) > 2 else "",
+                "fictitious_content1": distractors[1]["text"] if len(distractors) > 1 else "",
                 "fictitious_filename2": distractors[2].get("filename", "") if len(distractors) > 2 else "",
-                "question_type": qa["question_type"],
-                "difficulty": qa["difficulty"],
+                "fictitious_content2": distractors[2]["text"] if len(distractors) > 2 else "",
+                "question": qa["question"],
+                "answer": qa["answer"],
             }
         else:
             # Normal case: correct doc + 2 distractors
             hf_format = {
-                "question": qa["question"],
-                "answer": qa["answer"],
                 "content": correct_doc["text"],
                 "filename": correct_doc.get("filename", ""),
-                "fictitious_content1": distractors[0]["text"] if len(distractors) > 0 else "",
                 "fictitious_filename1": distractors[0].get("filename", "") if len(distractors) > 0 else "",
-                "fictitious_content2": distractors[1]["text"] if len(distractors) > 1 else "",
+                "fictitious_content1": distractors[0]["text"] if len(distractors) > 0 else "",
                 "fictitious_filename2": distractors[1].get("filename", "") if len(distractors) > 1 else "",
-                "question_type": qa["question_type"],
-                "difficulty": qa["difficulty"],
+                "fictitious_content2": distractors[1]["text"] if len(distractors) > 1 else "",
+                "question": qa["question"],
+                "answer": qa["answer"],
             }
 
         return hf_format
@@ -221,11 +217,14 @@ class TrainingDataFormatter:
 
         print("\n📝 Sample Formatted Data (Hugging Face):")
         hf_sample = hf_data[0]
-        print(f"\nQuestion: {hf_sample['question']}")
-        print(f"Answer: {hf_sample['answer'][:100]}...")
+        print(f"\nContent (first 100 chars): {hf_sample['content'][:100]}...")
         print(f"Filename: {hf_sample['filename']}")
         print(f"Fictitious Filename 1: {hf_sample['fictitious_filename1']}")
+        print(f"Fictitious Content 1 (first 60 chars): {hf_sample['fictitious_content1'][:60]}...")
         print(f"Fictitious Filename 2: {hf_sample['fictitious_filename2']}")
+        print(f"Fictitious Content 2 (first 60 chars): {hf_sample['fictitious_content2'][:60]}...")
+        print(f"Question: {hf_sample['question']}")
+        print(f"Answer: {hf_sample['answer'][:80]}...")
 
 
 def main():
