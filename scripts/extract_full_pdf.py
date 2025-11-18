@@ -5,9 +5,9 @@ from pyzerox import zerox
 load_dotenv()    
 pdf_path = "data/raw/제천시관광정보책자.pdf"
 
-model = "gpt-4o"
+model = "gpt-5.1"
 custom_system_prompt = """
-Convert the following PDF page to markdown format.
+Convert the following Korean Travel information PDF page to markdown format.
 Allowed only extract the all content text from the PDF page. 
 You should not make any changes to the text.
 """
