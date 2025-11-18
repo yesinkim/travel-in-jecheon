@@ -512,8 +512,8 @@ def main():
     """Main execution function."""
     print("🚀 Starting Jecheon Tourism Document Chunking (RAG-Optimized)...")
 
-    # Paths
-    markdown_path = "/home/user/goodganglabs/data/processed/제천시관광정보책자.md"
+    # Paths (using OCR-corrected markdown)
+    markdown_path = "/home/user/goodganglabs/data/processed/제천시관광정보책자_corrected.md"
     output_path = "/home/user/goodganglabs/data/chunks/documents.jsonl"
 
     # Initialize chunker
