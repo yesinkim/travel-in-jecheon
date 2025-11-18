@@ -9,3 +9,8 @@ __pycache__/
 *.pywz
 *.pyzw
 *.pyzwz
+
+# Test files
+test_*.py
+test_*.jsonl
+test_*.json
