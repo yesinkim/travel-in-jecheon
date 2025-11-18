@@ -38,7 +38,9 @@ class PipelineRunner:
             skip_qa_generation: If True, skip Q&A generation step (useful if already done)
         """
         self.skip_qa_generation = skip_qa_generation
-        self.scripts_dir = Path("/home/user/goodganglabs/scripts")
+        project_root = Path(__file__).parent.parent
+        self.scripts_dir = project_root / "scripts"
+        self.project_root = project_root
 
     def check_prerequisites(self) -> bool:
         """Check if all prerequisites are met."""
@@ -91,7 +93,7 @@ class PipelineRunner:
 
         try:
             result = subprocess.run(
-                ["python", str(script_path)],
+                [sys.executable, str(script_path)],
                 check=True,
                 capture_output=False,
                 text=True
@@ -154,7 +156,7 @@ class PipelineRunner:
         ]
 
         for file_path in files:
-            full_path = Path("/home/user/goodganglabs") / file_path
+            full_path = self.project_root / file_path
             if full_path.exists():
                 size_kb = full_path.stat().st_size / 1024
                 print(f"  ✅ {file_path} ({size_kb:.1f} KB)")

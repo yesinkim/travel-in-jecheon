@@ -1,7 +1,7 @@
 """
-Q&A Generation Script using Claude API
+Q&A Generation Script using OpenAI GPT-4o API
 
-This script generates question-answer pairs from document chunks using Claude API.
+This script generates question-answer pairs from document chunks using OpenAI GPT-4o API.
 Generates diverse question types: factual, descriptive, recommendation, comparison, no-answer.
 
 Input: data/chunks/documents.jsonl
@@ -12,13 +12,17 @@ import json
 import os
 from pathlib import Path
 from typing import List, Dict, Any
-import anthropic
+from openai import OpenAI
 from tqdm import tqdm
 import time
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class QAGenerator:
-    """Generates Q&A pairs using Claude API."""
+    """Generates Q&A pairs using OpenAI GPT-4o API."""
 
     # Question type distribution (target percentages)
     QUESTION_DISTRIBUTION = {
@@ -29,26 +33,26 @@ class QAGenerator:
         "no_answer": 0.05,  # 5%
     }
 
-    # Questions per chunk by category
+    # Questions per chunk by category (target: ~140-150 Q&A for 8B model training)
     QUESTIONS_PER_CHUNK = {
-        "tourism": 8,  # Major tourist sites
-        "transportation": 7,
+        "tourism": 8,  # Major tourist sites (most important)
+        "transportation": 8,
         "food": 8,
-        "accommodation": 6,
-        "activity": 7,
-        "culture": 7,
-        "course": 6,
-        "benefit": 5,
-        "general": 5,
+        "accommodation": 8,
+        "activity": 8,
+        "culture": 8,
+        "course": 7,
+        "benefit": 7,
+        "general": 7,
     }
 
     def __init__(self, api_key: str = None):
-        """Initialize QA generator with Claude API key."""
-        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        """Initialize QA generator with OpenAI API key."""
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable not set")
+            raise ValueError("OPENAI_API_KEY environment variable not set")
 
-        self.client = anthropic.Anthropic(api_key=self.api_key)
+        self.client = OpenAI(api_key=self.api_key)
         self.qa_pairs = []
 
     def load_documents(self, documents_path: str) -> List[Dict[str, Any]]:
@@ -68,7 +72,7 @@ class QAGenerator:
     ) -> str:
         """Create prompt for Claude to generate Q&A pairs."""
 
-        prompt = f"""당신은 제천시 관광 정보를 바탕으로 RAG(Retrieval-Augmented Generation) 학습용 데이터셋을 만드는 전문가입니다.
+        prompt = f"""제천시 관광 정보를 바탕으로 RAG(Retrieval-Augmented Generation) 학습용 데이터셋을 만들어주세요.
 
 주어진 문서에서 {num_questions}개의 질문-답변 쌍을 생성해주세요.
 
@@ -91,6 +95,12 @@ class QAGenerator:
    - 반드시 주어진 문서 내용만 사용
    - 문서에 없는 정보는 추측하지 말 것
    - 정보가 없으면 "제공된 관광 정보에는 [주제]에 대한 내용이 없습니다" 형식으로 답변
+
+   **중요: 추천/설명 질문 답변 시**
+   - 구체적인 내용을 포함해야 함 (코스, 장소명, 특징 등)
+   - 단순히 할인이나 가격 정보만 언급하지 말 것
+   - 예: "시티투어 추천해주세요" → 어떤 코스를 가는지, 어떤 장소를 방문하는지 설명
+   - 예: "맛집 추천해주세요" → 어떤 음식점이 있는지, 어떤 메뉴가 있는지 설명
 
 3. 질문 품질:
    - 자연스러운 한국어 구어체
@@ -129,7 +139,19 @@ JSON 배열로 반환하되, 각 요소는 다음 형식:
   }}
 ]
 
-이제 위 문서를 바탕으로 {num_questions}개의 질문-답변 쌍을 JSON 배열로 생성해주세요."""
+이제 위 문서를 바탕으로 {num_questions}개의 질문-답변 쌍을 JSON 형식으로 생성해주세요.
+
+반드시 다음 형식으로 응답하세요:
+{{
+  "qa_pairs": [
+    {{
+      "question": "질문 내용",
+      "answer": "답변 내용",
+      "question_type": "factual|descriptive|recommendation|comparison|no_answer",
+      "difficulty": "easy|medium|hard"
+    }}
+  ]
+}}"""
 
         return prompt
 
@@ -138,7 +160,7 @@ JSON 배열로 반환하되, 각 요소는 다음 형식:
         doc: Dict[str, Any],
         num_questions: int = 7
     ) -> List[Dict[str, Any]]:
-        """Generate Q&A pairs for a single document using Claude."""
+        """Generate Q&A pairs for a single document using OpenAI GPT-4o."""
 
         prompt = self.create_qa_generation_prompt(
             doc_content=doc["content"],
@@ -148,27 +170,37 @@ JSON 배열로 반환하되, 각 요소는 다음 형식:
         )
 
         try:
-            message = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "당신은 한국 관광 정보 데이터셋 생성 전문가입니다. 주어진 문서를 바탕으로 고품질의 질문-답변 쌍을 JSON 형식으로 생성합니다."},
+                    {"role": "user", "content": prompt}
+                ],
                 max_tokens=4096,
                 temperature=0.7,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                response_format={"type": "json_object"}
             )
 
-            response_text = message.content[0].text
+            response_text = response.choices[0].message.content
 
-            # Extract JSON from response
-            # Sometimes Claude returns markdown code blocks
-            if "```json" in response_text:
-                json_str = response_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in response_text:
-                json_str = response_text.split("```")[1].split("```")[0].strip()
+            # Parse JSON response
+            response_data = json.loads(response_text)
+
+            # Handle different possible JSON structures
+            if "qa_pairs" in response_data:
+                qa_list = response_data["qa_pairs"]
+            elif "questions" in response_data:
+                qa_list = response_data["questions"]
+            elif isinstance(response_data, list):
+                qa_list = response_data
             else:
-                json_str = response_text.strip()
-
-            qa_list = json.loads(json_str)
+                # Try to find the first list value
+                for value in response_data.values():
+                    if isinstance(value, list):
+                        qa_list = value
+                        break
+                else:
+                    qa_list = []
 
             # Add document metadata to each Q&A
             for qa in qa_list:
@@ -190,7 +222,7 @@ JSON 배열로 반환하되, 각 요소는 다음 형식:
     ) -> List[Dict[str, Any]]:
         """Generate Q&A pairs for all documents."""
 
-        print(f"\n🤖 Generating Q&A pairs using Claude API...")
+        print(f"\n🤖 Generating Q&A pairs using OpenAI GPT-4o API...")
         print(f"Target: {target_total} Q&A pairs from {len(documents)} documents\n")
 
         all_qa = []
@@ -274,18 +306,19 @@ JSON 배열로 반환하되, 각 요소는 다음 형식:
 
 def main():
     """Main execution function."""
-    print("🚀 Starting Q&A Generation with Claude API...")
+    print("🚀 Starting Q&A Generation with OpenAI GPT-4o API...")
 
     # Check for API key
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        print("\n❌ Error: ANTHROPIC_API_KEY environment variable not set!")
-        print("Please set it using: export ANTHROPIC_API_KEY='your-api-key'")
+        print("\n❌ Error: OPENAI_API_KEY environment variable not set!")
+        print("Please set it using: export OPENAI_API_KEY='your-api-key'")
         return
 
     # Paths
-    documents_path = "/home/user/goodganglabs/data/chunks/documents.jsonl"
-    output_path = "/home/user/goodganglabs/data/chunks/qa_pairs.jsonl"
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    documents_path = os.path.join(project_root, "data", "chunks", "documents.jsonl")
+    output_path = os.path.join(project_root, "data", "chunks", "qa_pairs.jsonl")
 
     # Initialize generator
     generator = QAGenerator(api_key=api_key)
