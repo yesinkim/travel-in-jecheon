@@ -273,6 +273,51 @@ class RAGMetrics:
             k_values=k_values
         )
 
+    def evaluate_generation_only(
+        self,
+        predictions: List[str],
+        references: List[str]
+    ) -> Dict[str, float]:
+        """
+        Evaluate only generation quality (no retrieval metrics)
+
+        Use this when you only want to compare generated answers vs ground truth,
+        without evaluating document retrieval performance.
+
+        Args:
+            predictions: List of generated answers
+            references: List of ground truth answers
+
+        Returns:
+            Dictionary with generation metrics only (ROUGE, BERTScore, Exact Match)
+        """
+        metrics = defaultdict(list)
+
+        # Generation metrics - ROUGE and Exact Match
+        for pred, ref in zip(predictions, references):
+            rouge = self.generation_metrics.rouge_scores(pred, ref)
+            for key, value in rouge.items():
+                metrics[key].append(value)
+
+            em = self.generation_metrics.exact_match(pred, ref)
+            metrics['exact_match'].append(em)
+
+        # Generation metrics - BERTScore (batch computation)
+        if predictions and references:
+            bert_scores = self.generation_metrics.bert_score(predictions, references)
+            for key, value in bert_scores.items():
+                metrics[key] = value  # BERTScore is already averaged
+
+        # Average all metrics
+        result = {}
+        for key, values in metrics.items():
+            if isinstance(values, list):
+                result[key] = np.mean(values)
+            else:
+                result[key] = values
+
+        return result
+
 
 class BenchRAGEvaluator:
     """
@@ -367,6 +412,74 @@ class BenchRAGEvaluator:
             lines.append(f"  BERTScore:  {metrics['bert_f1']:.4f}")
         if 'exact_match' in metrics:
             lines.append(f"  Exact Match: {metrics['exact_match']:.4f}")
+
+        lines.append("\n" + "=" * 60)
+
+        return "\n".join(lines)
+
+    def evaluate_generation_only(
+        self,
+        dataset: List[Dict[str, Any]],
+        model_predictions: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Evaluate only generation quality (no retrieval metrics)
+
+        Use this when you want to compare generated answers vs ground truth
+        without considering document retrieval performance.
+
+        Args:
+            dataset: List of data samples with ground truth
+                Each sample should have: 'question', 'answer'
+            model_predictions: List of model predictions
+                Each prediction should have: 'answer'
+
+        Returns:
+            Dictionary with generation metrics only
+        """
+        predictions = []
+        references = []
+
+        for data, pred in zip(dataset, model_predictions):
+            predictions.append(pred['answer'])
+            references.append(data['answer'])
+
+        # Compute generation metrics only
+        metrics = self.rag_metrics.evaluate_generation_only(
+            predictions=predictions,
+            references=references
+        )
+
+        # Add summary statistics
+        metrics['num_samples'] = len(dataset)
+
+        return metrics
+
+    def format_results_generation_only(self, metrics: Dict[str, float]) -> str:
+        """Format generation-only evaluation results for display"""
+        lines = ["=" * 60]
+        lines.append("GENERATION-ONLY EVALUATION RESULTS")
+        lines.append("=" * 60)
+
+        # Generation metrics
+        lines.append("\n📝 Generation Metrics:")
+        if 'rouge1' in metrics:
+            lines.append(f"  ROUGE-1:     {metrics['rouge1']:.4f}")
+        if 'rouge2' in metrics:
+            lines.append(f"  ROUGE-2:     {metrics['rouge2']:.4f}")
+        if 'rougeL' in metrics:
+            lines.append(f"  ROUGE-L:     {metrics['rougeL']:.4f}")
+        if 'bert_f1' in metrics:
+            lines.append(f"  BERTScore F1: {metrics['bert_f1']:.4f}")
+        if 'bert_precision' in metrics:
+            lines.append(f"  BERTScore P:  {metrics['bert_precision']:.4f}")
+        if 'bert_recall' in metrics:
+            lines.append(f"  BERTScore R:  {metrics['bert_recall']:.4f}")
+        if 'exact_match' in metrics:
+            lines.append(f"  Exact Match:  {metrics['exact_match']:.4f}")
+
+        if 'num_samples' in metrics:
+            lines.append(f"\n📊 Total Samples: {metrics['num_samples']}")
 
         lines.append("\n" + "=" * 60)
 
