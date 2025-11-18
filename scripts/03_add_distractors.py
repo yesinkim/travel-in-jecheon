@@ -22,13 +22,15 @@ from collections import defaultdict
 class DistractorAdder:
     """Adds distractor documents to Q&A pairs for RAG fine-tuning."""
 
-    def __init__(self, num_distractors: int = 3, hard_ratio: float = 0.3):
+    def __init__(self, num_distractors: int = 2, hard_ratio: float = 0.5):
         """
         Initialize distractor adder.
 
+        Following Finetune-RAG standard: 1 correct + 2 distractors = 3 total documents
+
         Args:
-            num_distractors: Number of distractor documents to add per Q&A
-            hard_ratio: Ratio of hard distractors (same category)
+            num_distractors: Number of distractor documents to add per Q&A (default: 2)
+            hard_ratio: Ratio of hard distractors (same category, default: 0.5 = 1 hard + 1 easy)
         """
         self.num_distractors = num_distractors
         self.hard_ratio = hard_ratio
@@ -119,9 +121,10 @@ class DistractorAdder:
 
     def add_distractors_to_qa(self) -> List[Dict[str, Any]]:
         """Add distractor documents to all Q&A pairs."""
-        print(f"\n🎯 Adding {self.num_distractors} distractors per Q&A pair...")
+        print(f"\n🎯 Adding {self.num_distractors} distractors per Q&A pair (Finetune-RAG standard)...")
         print(f"  - Hard distractors (same category): {int(self.num_distractors * self.hard_ratio)}")
-        print(f"  - Easy distractors (different category): {self.num_distractors - int(self.num_distractors * self.hard_ratio)}\n")
+        print(f"  - Easy distractors (different category): {self.num_distractors - int(self.num_distractors * self.hard_ratio)}")
+        print(f"  - Total documents per Q&A: {self.num_distractors + 1} (1 correct + {self.num_distractors} distractors)\n")
 
         qa_with_distractors = []
 
@@ -229,8 +232,8 @@ def main():
     qa_path = "/home/user/goodganglabs/data/chunks/qa_pairs.jsonl"
     output_path = "/home/user/goodganglabs/data/chunks/qa_with_distractors.jsonl"
 
-    # Initialize distractor adder
-    adder = DistractorAdder(num_distractors=3, hard_ratio=0.3)
+    # Initialize distractor adder (Finetune-RAG standard: 2 distractors)
+    adder = DistractorAdder(num_distractors=2, hard_ratio=0.5)
 
     # Load documents and Q&A pairs
     documents = adder.load_documents(documents_path)

@@ -1,8 +1,13 @@
 """
-Document Chunking Script for Jecheon Tourism Dataset (Enhanced Version)
+Document Chunking Script for Jecheon Tourism Dataset (Optimized for RAG)
 
 This script extracts meaningful chunks from the Jecheon tourism markdown file
-with more granular segmentation. Overlapping is allowed for better coverage.
+with optimal size for RAG fine-tuning (300-2000 chars).
+
+Key features:
+- Minimum chunk size: 300 chars (sufficient context)
+- Maximum chunk size: 2000 chars (avoid noise)
+- Context-aware extraction (preserve semantic boundaries)
 
 Output: data/chunks/documents.jsonl
 """
@@ -14,7 +19,11 @@ from typing import List, Dict, Any
 
 
 class JecheonDocumentChunker:
-    """Extracts and chunks Jecheon tourism information with fine granularity."""
+    """Extracts and chunks Jecheon tourism information optimized for RAG."""
+
+    # RAG-optimized chunk sizes
+    MIN_CHUNK_SIZE = 300   # chars (~75 tokens)
+    MAX_CHUNK_SIZE = 2000  # chars (~500 tokens)
 
     CATEGORIES = {
         "transportation": ["시티투어", "관광택시", "관광주민증", "교통"],
@@ -31,6 +40,7 @@ class JecheonDocumentChunker:
         """Initialize chunker with markdown file path."""
         self.markdown_path = Path(markdown_path)
         self.chunks = []
+        self.full_content = ""
 
     def read_markdown(self) -> str:
         """Read markdown file."""
@@ -86,70 +96,73 @@ class JecheonDocumentChunker:
         except Exception as e:
             return ""
 
-    def extract_tourist_sites(self, content: str) -> List[Dict[str, Any]]:
-        """Extract individual tourist sites as separate chunks."""
-        sites = []
+    def ensure_min_size(self, content: str, title: str, context_before: str = "",
+                       context_after: str = "") -> str:
+        """
+        Ensure chunk meets minimum size by adding context.
+        If too small, add surrounding context.
+        """
+        if len(content) >= self.MIN_CHUNK_SIZE:
+            return content
 
-        # Pattern: Site name followed by address
-        site_patterns = [
-            # Major sites with full details
-            (r"의림지·의림지역사박물관.*?(?=배론성지|$)", "의림지·의림지역사박물관", "tourism", 12, "송학면", "제천시 송학면 의림대로 47길 7"),
-            (r"배론성지.*?(?=박달재|$)", "배론성지", "culture", 12, "봉양읍", "제천시 봉양읍 배론성지길 296"),
-            (r"박달재(?:는|\.)[^제]*?제천시[^\n]+(?:\n[^\n제]+){0,3}", "박달재", "tourism", 12, "백운면", "제천시 백운면 박달로 231"),
-            (r"제천한방엑스포\s*공원.*?(?=의림지|$)", "제천한방엑스포 공원", "culture", 12, "", "제천시 한방엑스포로 19"),
-            (r"청풍호반\s*케이블카.*?제천시\s*청풍면[^\n]+", "청풍호반 케이블카", "tourism", 14, "청풍면", "제천시 청풍면 문화재길 166"),
-            (r"청풍문화유산단지.*?제천시\s*청풍호로[^\n]+", "청풍문화유산단지", "culture", 14, "청풍면", "제천시 청풍호로 2048"),
-            (r"청풍랜드.*?제천시\s*청풍면[^\n]+", "청풍랜드", "activity", 14, "청풍면", "제천시 청풍면 청풍호로50길 6"),
-            (r"옥순봉\s*출렁다리.*?제천시\s*수산면[^\n]+", "옥순봉 출렁다리", "tourism", 14, "수산면", "제천시 수산면 옥순봉로342"),
-            (r"국립\s*제천\s*치유의\s*숲.*?제천시\s*청풍면[^\n]+", "국립 제천 치유의 숲", "activity", 14, "청풍면", "제천시 청풍면 학현소야로 590"),
-            (r"청풍호\s*자드락길.*?제천시\s*수산면[^\n]+", "청풍호 자드락길", "activity", 14, "수산면", "제천시 수산면 옥순봉로 6길 3"),
-        ]
+        # Add context to meet minimum size
+        enhanced_content = content
 
-        for pattern, title, category, page, location, address in site_patterns:
-            match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
-            if match:
-                sites.append({
-                    "title": title,
-                    "category": category,
-                    "content": match.group(0).strip(),
-                    "page": page,
-                    "location": location,
-                    "address": address,
-                })
+        # Add context before if needed
+        if context_before and len(enhanced_content) < self.MIN_CHUNK_SIZE:
+            additional = context_before[-200:]  # Last 200 chars
+            enhanced_content = f"{additional}\n\n{enhanced_content}"
 
-        # Additional sites from secondary sections
-        additional_sites = [
-            ("의림지 수리공원", "activity", r"의림지\s*수리공원.*?(?:운영기간|제천시\s*모산동)[^\n]*(?:\n[^\n]+){0,5}"),
-            ("삼한의 초록길", "activity", r"삼한의\s*초록길.*?(?:제천시\s*성봉로|km\s*길이)[^\n]*(?:\n[^\n]+){0,3}"),
-            ("교동민화마을", "culture", r"교동민화마을.*?제천시\s*용두로[^\n]+(?:\n[^\n]+){0,2}"),
-            ("모산비행장", "tourism", r"모산비행장.*?제천시\s*고암동[^\n]+(?:\n[^\n]+){0,2}"),
-            ("아열대 스마트온실", "activity", r"아열대\s*스마트온실.*?제천시\s*봉양읍[^\n]+(?:\n[^\n]+){0,3}"),
-            ("한국차문화박물관", "culture", r"한국차문화박물관.*?제천시\s*금학로[^\n]+(?:\n[^\n]+){0,2}"),
-            ("벌새꽃돌과학관", "culture", r"벌새꽃돌과학관.*?제천시\s*봉양읍[^\n]+(?:\n[^\n]+){0,3}"),
-        ]
+        # Add context after if needed
+        if context_after and len(enhanced_content) < self.MIN_CHUNK_SIZE:
+            additional = context_after[:200]  # First 200 chars
+            enhanced_content = f"{enhanced_content}\n\n{additional}"
 
-        for title, category, pattern in additional_sites:
-            match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
-            if match:
-                # Extract address from content
-                address_match = re.search(r'제천시[^\n]+', match.group(0))
-                address = address_match.group(0) if address_match else ""
+        return enhanced_content
 
-                sites.append({
-                    "title": title,
-                    "category": category,
-                    "content": match.group(0).strip(),
-                    "page": 12,  # Default page
-                    "location": "",
-                    "address": address,
-                })
+    def truncate_max_size(self, content: str) -> str:
+        """Truncate content if it exceeds maximum size."""
+        if len(content) <= self.MAX_CHUNK_SIZE:
+            return content
 
-        return sites
+        # Find last sentence boundary within limit
+        truncated = content[:self.MAX_CHUNK_SIZE]
+        last_period = max(truncated.rfind('.\n'), truncated.rfind('。\n'))
+
+        if last_period > self.MIN_CHUNK_SIZE:
+            return content[:last_period + 2].strip()
+
+        return truncated.strip()
+
+    def extract_tourist_site_enhanced(self, content: str, title: str,
+                                      pattern: str) -> str:
+        """Extract tourist site with enhanced context."""
+        match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+        if not match:
+            return ""
+
+        extracted = match.group(0).strip()
+
+        # If too small, try to get more context
+        if len(extracted) < self.MIN_CHUNK_SIZE:
+            # Find position in full content
+            pos = content.find(extracted)
+            if pos != -1:
+                # Get surrounding context
+                start = max(0, pos - 200)
+                end = min(len(content), pos + len(extracted) + 200)
+                extended = content[start:end].strip()
+
+                if len(extended) >= self.MIN_CHUNK_SIZE:
+                    extracted = extended
+
+        return self.truncate_max_size(extracted)
 
     def extract_chunks(self) -> List[Dict[str, Any]]:
         """Extract meaningful chunks from the markdown content."""
         content = self.read_markdown()
         content = self.clean_text(content)
+        self.full_content = content
 
         chunks_data = []
 
@@ -187,20 +200,123 @@ class JecheonDocumentChunker:
             },
         ])
 
-        # 2. Extract tourist sites (granular)
-        tourist_sites = self.extract_tourist_sites(content)
+        # 2. Tourist Sites (with enhanced context)
+        tourist_sites = [
+            {
+                "title": "의림지·의림지역사박물관",
+                "category": "tourism",
+                "pattern": r"의림지(?:는|·의림지역사박물관).*?(?:제천시\s*(?:송학면|솔매로)[^\n]+)(?:\n[^\n]+){0,5}",
+                "page": 12,
+                "location": "송학면",
+                "address": "제천시 송학면 의림대로 47길 7",
+            },
+            {
+                "title": "배론성지",
+                "category": "culture",
+                "pattern": r"배론성지.*?제천시\s*봉양읍[^\n]+(?:\n[^\n]+){0,5}",
+                "page": 12,
+                "location": "봉양읍",
+                "address": "제천시 봉양읍 배론성지길 296",
+            },
+            {
+                "title": "박달재",
+                "category": "tourism",
+                "pattern": r"박달재.*?제천시\s*백운면[^\n]+(?:\n[^\n]+){0,5}",
+                "page": 12,
+                "location": "백운면",
+                "address": "제천시 백운면 박달로 231",
+            },
+            {
+                "title": "청풍호반 케이블카",
+                "category": "tourism",
+                "pattern": r"비봉산의?\s*(?:관광|풍경).*?청풍호반?\s*케이블카.*?제천시\s*청풍면[^\n]+(?:\n[^\n]+){0,3}",
+                "page": 14,
+                "location": "청풍면",
+                "address": "제천시 청풍면 문화재길 166",
+            },
+            {
+                "title": "청풍문화유산단지",
+                "category": "culture",
+                "pattern": r"청풍문화유산단지.*?제천시\s*청풍호로[^\n]+(?:\n[^\n]+){0,3}",
+                "page": 14,
+                "location": "청풍면",
+                "address": "제천시 청풍호로 2048",
+            },
+            {
+                "title": "청풍랜드",
+                "category": "activity",
+                "pattern": r"청풍랜드.*?제천시\s*청풍면[^\n]+(?:\n[^\n]+){0,3}",
+                "page": 14,
+                "location": "청풍면",
+                "address": "제천시 청풍면 청풍호로50길 6",
+            },
+            {
+                "title": "옥순봉 출렁다리",
+                "category": "tourism",
+                "pattern": r"(?:명승.*?)?옥순봉\s*출렁다리.*?제천시\s*수산면[^\n]+(?:\n[^\n]+){0,3}",
+                "page": 14,
+                "location": "수산면",
+                "address": "제천시 수산면 옥순봉로342",
+            },
+            {
+                "title": "국립 제천 치유의 숲",
+                "category": "activity",
+                "pattern": r"국립\s*제천\s*치유의\s*숲.*?제천시\s*청풍면[^\n]+(?:\n[^\n]+){0,3}",
+                "page": 14,
+                "location": "청풍면",
+                "address": "제천시 청풍면 학현소야로 590",
+            },
+            {
+                "title": "청풍호 자드락길",
+                "category": "activity",
+                "pattern": r"청풍호\s*자드락길.*?제천시\s*수산면[^\n]+(?:\n[^\n]+){0,3}",
+                "page": 14,
+                "location": "수산면",
+                "address": "제천시 수산면 옥순봉로 6길 3",
+            },
+        ]
+
         for site in tourist_sites:
-            chunks_data.append(site)
+            extracted = self.extract_tourist_site_enhanced(
+                content, site["title"], site["pattern"]
+            )
+            if extracted:
+                chunks_data.append({
+                    "title": site["title"],
+                    "category": site["category"],
+                    "content": extracted,
+                    "page": site["page"],
+                    "location": site.get("location", ""),
+                    "address": site.get("address", ""),
+                })
 
-        # 3. Trekking & Activities
-        chunks_data.append({
-            "title": "트레킹·걷기 좋은 곳",
-            "category": "activity",
-            "content": self.extract_between_patterns(content, "트래킹·걷기 좋은곳", "코스여행 추천"),
-            "page": 16,
-        })
+        # 3. Additional sites
+        additional_sites = [
+            ("삼한의 초록길", "activity", r"삼한의\s*초록길.*?(?:제천시\s*성봉로|건강과\s*심리치유)[^\n]*(?:\n[^\n]+){0,5}"),
+            ("제천의 축제", "activity", r"제천의\s*축제.*?(?:청풍호\s*벚꽃축제|봉양박달콩축제).*?(?:\n[^\n]+){0,8}"),
+        ]
 
-        # 4. Travel Courses (each course separately)
+        for title, category, pattern in additional_sites:
+            extracted = self.extract_tourist_site_enhanced(content, title, pattern)
+            if extracted:
+                chunks_data.append({
+                    "title": title,
+                    "category": category,
+                    "content": extracted,
+                    "page": 12,
+                })
+
+        # 4. Trekking & Activities
+        trekking_content = self.extract_between_patterns(content, "트래킹·걷기 좋은곳", "코스여행 추천")
+        if trekking_content:
+            chunks_data.append({
+                "title": "트레킹·걷기 좋은 곳",
+                "category": "activity",
+                "content": trekking_content,
+                "page": 16,
+            })
+
+        # 5. Travel Courses
         chunks_data.extend([
             {
                 "title": "제천 1일 코스",
@@ -227,12 +343,6 @@ class JecheonDocumentChunker:
                 "page": 17,
             },
             {
-                "title": "문화·역사 코스",
-                "category": "course",
-                "content": self.extract_between_patterns(content, "문화·역사 코스", "종교여행 코스"),
-                "page": 18,
-            },
-            {
                 "title": "불교 순례 코스",
                 "category": "course",
                 "content": self.extract_between_patterns(content, "#불교 코스", "#천주교 코스"),
@@ -244,20 +354,14 @@ class JecheonDocumentChunker:
                 "content": self.extract_between_patterns(content, "#천주교 코스", "#기독교 코스"),
                 "page": 18,
             },
-            {
-                "title": "기독교 순례 코스",
-                "category": "course",
-                "content": self.extract_between_patterns(content, "#기독교 코스", "#유교·의병문화 코스"),
-                "page": 18,
-            },
         ])
 
-        # 5. Food & Restaurants
+        # 6. Food & Restaurants
         chunks_data.extend([
             {
-                "title": "제천 맛집 브랜드 (약채락·의림지에코닉)",
+                "title": "제천 맛집 안내",
                 "category": "food",
-                "content": self.extract_between_patterns(content, "제천맛집", "시내권 ("),
+                "content": self.extract_between_patterns(content, "제천맛집", "북부권 ("),
                 "page": 20,
             },
             {
@@ -274,7 +378,7 @@ class JecheonDocumentChunker:
             },
         ])
 
-        # 6. Accommodation (individual facilities)
+        # 7. Accommodation
         accommodations = [
             ("포레스트 리솜", "제천시 백운면 금봉로 365", "043, 649, 6000"),
             ("청풍리조트", "제천시 청풍면 청풍호로 1798", "043, 640, 7000"),
@@ -283,18 +387,26 @@ class JecheonDocumentChunker:
         ]
 
         for name, address, phone in accommodations:
-            pattern = f"{name}.*?{address}.*?{phone}"
+            # Find accommodation with context
+            pattern = f"{name}.*?{phone}"
             match = re.search(pattern, content, re.DOTALL)
             if match:
+                extracted = match.group(0).strip()
+                # Add description if too short
+                if len(extracted) < self.MIN_CHUNK_SIZE:
+                    # Add accommodation type description
+                    desc = f"{name}은(는) 제천의 주요 숙박시설입니다.\n주소: {address}\n연락처: {phone}"
+                    extracted = f"{desc}\n\n{extracted}"
+
                 chunks_data.append({
                     "title": name,
                     "category": "accommodation",
-                    "content": match.group(0).strip(),
+                    "content": self.truncate_max_size(extracted),
                     "page": 22,
                     "address": address,
                 })
 
-        # 7. Benefits & Tips
+        # 8. Benefits & Tips
         chunks_data.extend([
             {
                 "title": "고향사랑 기부제",
@@ -303,46 +415,45 @@ class JecheonDocumentChunker:
                 "page": 24,
             },
             {
-                "title": "청풍호 수경분수 운영시간",
+                "title": "알아두면 좋은 정보",
                 "category": "benefit",
-                "content": self.extract_between_patterns(content, "청풍호조경분수", "의림지미디어파사드"),
-                "page": 26,
-            },
-            {
-                "title": "의림지 미디어파사드 운영시간",
-                "category": "benefit",
-                "content": self.extract_between_patterns(content, "의림지미디어파사드", "육삼륙 관광단지"),
+                "content": self.extract_between_patterns(content, "알아두면 도움되는 꿀팁", "Travel in Jecheon"),
                 "page": 26,
             },
         ])
 
-        # 8. Festivals
-        festivals_content = self.extract_between_patterns(content, "제천의 축제", "미리보는 여행지")
-        if festivals_content:
-            chunks_data.append({
-                "title": "제천의 축제",
-                "category": "activity",
-                "content": festivals_content,
-                "page": 11,
-            })
-
-        # Create document chunks with proper doc_ids
+        # Create document chunks with size validation
         doc_id = 1
         for chunk_data in chunks_data:
-            if chunk_data.get("content") and len(chunk_data["content"].strip()) > 30:
-                self.chunks.append({
-                    "doc_id": f"doc_{doc_id:03d}",
-                    "title": chunk_data["title"],
-                    "category": chunk_data["category"],
-                    "content": chunk_data["content"].strip(),
-                    "metadata": {
-                        "page": chunk_data.get("page", 0),
-                        "location": chunk_data.get("location", ""),
-                        "address": chunk_data.get("address", ""),
-                    },
-                    "filename": f"doc_{doc_id:03d}_{chunk_data['title']}.txt",
-                })
-                doc_id += 1
+            content_text = chunk_data.get("content", "")
+            if not content_text or len(content_text.strip()) < 50:
+                continue
+
+            # Ensure minimum size
+            title = chunk_data["title"]
+            if len(content_text) < self.MIN_CHUNK_SIZE:
+                # Add title as context if needed
+                enhanced = f"# {title}\n\n{content_text}"
+                if len(enhanced) < self.MIN_CHUNK_SIZE and chunk_data.get("address"):
+                    enhanced += f"\n\n위치: {chunk_data['address']}"
+                content_text = enhanced
+
+            # Truncate if too large
+            content_text = self.truncate_max_size(content_text)
+
+            self.chunks.append({
+                "doc_id": f"doc_{doc_id:03d}",
+                "title": chunk_data["title"],
+                "category": chunk_data["category"],
+                "content": content_text.strip(),
+                "metadata": {
+                    "page": chunk_data.get("page", 0),
+                    "location": chunk_data.get("location", ""),
+                    "address": chunk_data.get("address", ""),
+                },
+                "filename": f"doc_{doc_id:03d}_{chunk_data['title']}.txt",
+            })
+            doc_id += 1
 
         return self.chunks
 
@@ -362,6 +473,23 @@ class JecheonDocumentChunker:
         print(f"\n📊 Extraction Summary:")
         print(f"Total chunks: {len(self.chunks)}")
 
+        # Size statistics
+        sizes = [len(chunk["content"]) for chunk in self.chunks]
+        if sizes:
+            import statistics
+            print(f"\n📏 Chunk Size Statistics:")
+            print(f"  Average: {statistics.mean(sizes):.0f} chars")
+            print(f"  Median: {statistics.median(sizes):.0f} chars")
+            print(f"  Min: {min(sizes)} chars")
+            print(f"  Max: {max(sizes)} chars")
+
+            # Size distribution
+            print(f"\n📊 Size Distribution:")
+            print(f"  < 300 chars: {sum(1 for s in sizes if s < 300)} ⚠️")
+            print(f"  300-1000 chars: {sum(1 for s in sizes if 300 <= s < 1000)} ✅")
+            print(f"  1000-2000 chars: {sum(1 for s in sizes if 1000 <= s < 2000)} ✅")
+            print(f"  > 2000 chars: {sum(1 for s in sizes if s >= 2000)} ⚠️")
+
         # Category distribution
         category_counts = {}
         for chunk in self.chunks:
@@ -372,16 +500,17 @@ class JecheonDocumentChunker:
         for cat, count in sorted(category_counts.items(), key=lambda x: -x[1]):
             print(f"  - {cat}: {count}")
 
-        print("\n📝 All Chunks:")
-        for chunk in self.chunks:
+        print("\n📝 Sample Chunks:")
+        for chunk in self.chunks[:5]:
             addr = chunk['metadata'].get('address', '')
             addr_str = f" | {addr}" if addr else ""
-            print(f"  [{chunk['doc_id']}] {chunk['title']} ({chunk['category']}){addr_str}")
+            size = len(chunk['content'])
+            print(f"  [{chunk['doc_id']}] {chunk['title']} ({size} chars){addr_str}")
 
 
 def main():
     """Main execution function."""
-    print("🚀 Starting Jecheon Tourism Document Chunking (Enhanced)...")
+    print("🚀 Starting Jecheon Tourism Document Chunking (RAG-Optimized)...")
 
     # Paths
     markdown_path = "/home/user/goodganglabs/data/processed/제천시관광정보책자.md"
