@@ -126,22 +126,36 @@ class TrainingDataFormatter:
         """
         # Get correct document
         correct_doc = qa.get("correct_doc")
+        distractors = qa["distractor_docs"]
 
-        # Get distractor documents (up to 2 for Finetune-RAG compatibility)
-        distractors = qa["distractor_docs"][:2]
-
-        hf_format = {
-            "question": qa["question"],
-            "answer": qa["answer"],
-            "content": correct_doc["text"] if correct_doc else "",
-            "filename": correct_doc.get("filename", "") if correct_doc else "",
-            "fictitious_content1": distractors[0]["text"] if len(distractors) > 0 else "",
-            "fictitious_filename1": distractors[0].get("filename", "") if len(distractors) > 0 else "",
-            "fictitious_content2": distractors[1]["text"] if len(distractors) > 1 else "",
-            "fictitious_filename2": distractors[1].get("filename", "") if len(distractors) > 1 else "",
-            "question_type": qa["question_type"],
-            "difficulty": qa["difficulty"],
-        }
+        # If no correct doc (no_answer cases), use distractors for all content fields
+        if not correct_doc:
+            hf_format = {
+                "question": qa["question"],
+                "answer": qa["answer"],
+                "content": distractors[0]["text"] if len(distractors) > 0 else "",
+                "filename": distractors[0].get("filename", "") if len(distractors) > 0 else "",
+                "fictitious_content1": distractors[1]["text"] if len(distractors) > 1 else "",
+                "fictitious_filename1": distractors[1].get("filename", "") if len(distractors) > 1 else "",
+                "fictitious_content2": distractors[2]["text"] if len(distractors) > 2 else "",
+                "fictitious_filename2": distractors[2].get("filename", "") if len(distractors) > 2 else "",
+                "question_type": qa["question_type"],
+                "difficulty": qa["difficulty"],
+            }
+        else:
+            # Normal case: correct doc + 2 distractors
+            hf_format = {
+                "question": qa["question"],
+                "answer": qa["answer"],
+                "content": correct_doc["text"],
+                "filename": correct_doc.get("filename", ""),
+                "fictitious_content1": distractors[0]["text"] if len(distractors) > 0 else "",
+                "fictitious_filename1": distractors[0].get("filename", "") if len(distractors) > 0 else "",
+                "fictitious_content2": distractors[1]["text"] if len(distractors) > 1 else "",
+                "fictitious_filename2": distractors[1].get("filename", "") if len(distractors) > 1 else "",
+                "question_type": qa["question_type"],
+                "difficulty": qa["difficulty"],
+            }
 
         return hf_format
 
