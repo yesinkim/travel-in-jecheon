@@ -242,7 +242,7 @@ def main():
     print(f"✅ Loaded {len(qa_data)} Q&A pairs with distractors")
 
     # Format all data
-    instruction_data, hf_data = formatter.format_all_data(format_style="xml")
+    instruction_data, hf_data = formatter.format_all_data(format_style="baseline")
 
     # Save formatted data
     formatter.save_to_jsonl(instruction_data, output_instruction_path)
