@@ -1,12 +1,13 @@
 """
-Train/Test Split Script
+Train/Validation/Test Split Script
 
-This script splits the formatted training data into train and test sets
+This script splits the formatted training data into train, validation, and test sets
 with stratified sampling to maintain question type distribution.
 
 Input: data/processed/training_data.jsonl
 Output:
   - data/processed/train.jsonl
+  - data/processed/val.jsonl
   - data/processed/test.jsonl
 """
 
@@ -18,16 +19,18 @@ from collections import defaultdict
 
 
 class TrainTestSplitter:
-    """Splits dataset into train and test sets with stratification."""
+    """Splits dataset into train, validation, and test sets with stratification."""
 
-    def __init__(self, test_size: float = 0.21, random_seed: int = 42):
+    def __init__(self, val_size: float = 0.1, test_size: float = 0.1, random_seed: int = 42):
         """
         Initialize splitter.
 
         Args:
-            test_size: Proportion of data for test set (default: 0.21 for 79/21 split)
+            val_size: Proportion of data for validation set (default: 0.1 for 80/10/10 split)
+            test_size: Proportion of data for test set (default: 0.1 for 80/10/10 split)
             random_seed: Random seed for reproducibility
         """
+        self.val_size = val_size
         self.test_size = test_size
         self.random_seed = random_seed
         random.seed(random_seed)
@@ -44,7 +47,7 @@ class TrainTestSplitter:
         self,
         data: List[Dict[str, Any]],
         stratify_key: str = "question_type"
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         Perform stratified split to maintain distribution of question types.
 
@@ -53,7 +56,7 @@ class TrainTestSplitter:
             stratify_key: Key to stratify on (default: "question_type")
 
         Returns:
-            Tuple of (train_data, test_data)
+            Tuple of (train_data, val_data, test_data)
         """
         # Group data by stratification key
         grouped_data = defaultdict(list)
@@ -61,29 +64,42 @@ class TrainTestSplitter:
             key_value = item.get(stratify_key, "unknown")
             grouped_data[key_value].append(item)
 
-        train_data = []
-        test_data = []
+        train_data, val_data, test_data = [], [], []
 
         # Split each group proportionally
         for key_value, items in grouped_data.items():
-            # Shuffle items in this group
             random.shuffle(items)
 
-            # Calculate split point
-            n_test = max(1, int(len(items) * self.test_size))
-            n_train = len(items) - n_test
+            n_total = len(items)
+            n_val = int(n_total * self.val_size)
+            n_test = int(n_total * self.test_size)
+            # Handle cases where a group is too small
+            if n_total > 2:
+                if n_val == 0: n_val = 1
+                if n_test == 0: n_test = 1
+            elif n_total == 2:
+                n_val = 1
+                n_test = 1
+            elif n_total == 1:
+                n_val = 0
+                n_test = 1 # Prioritize test set
 
-            # Split
+            n_train = n_total - n_val - n_test
+            if n_train < 0: n_train = 0
+
+
             train_data.extend(items[:n_train])
-            test_data.extend(items[n_train:])
+            val_data.extend(items[n_train:n_train + n_val])
+            test_data.extend(items[n_train + n_val:])
 
-            print(f"  {key_value}: {n_train} train, {n_test} test")
+            print(f"  {key_value}: {n_train} train, {n_val} val, {n_test} test")
 
         # Shuffle final datasets
         random.shuffle(train_data)
+        random.shuffle(val_data)
         random.shuffle(test_data)
 
-        return train_data, test_data
+        return train_data, val_data, test_data
 
     def save_to_jsonl(self, data: List[Dict[str, Any]], output_path: str):
         """Save data to JSONL file."""
@@ -99,92 +115,79 @@ class TrainTestSplitter:
     def print_summary(
         self,
         train_data: List[Dict[str, Any]],
+        val_data: List[Dict[str, Any]],
         test_data: List[Dict[str, Any]]
     ):
-        """Print summary of train/test split."""
-        total = len(train_data) + len(test_data)
+        """Print summary of train/val/test split."""
+        total = len(train_data) + len(val_data) + len(test_data)
+        if total == 0:
+            print("\n📊 No data to split.")
+            return
 
-        print(f"\n📊 Train/Test Split Summary:")
+        print(f"\n📊 Train/Val/Test Split Summary:")
         print(f"Total items: {total}")
         print(f"Train: {len(train_data)} ({len(train_data)/total*100:.1f}%)")
+        print(f"Validation: {len(val_data)} ({len(val_data)/total*100:.1f}%)")
         print(f"Test: {len(test_data)} ({len(test_data)/total*100:.1f}%)")
 
-        # Question type distribution in train
-        train_type_counts = {}
-        for item in train_data:
-            q_type = item.get("question_type", "unknown")
-            train_type_counts[q_type] = train_type_counts.get(q_type, 0) + 1
+        def print_distribution(dataset, name, key):
+            counts = defaultdict(int)
+            if not dataset: return
+            for item in dataset:
+                value = item.get(key, "unknown")
+                counts[value] += 1
 
-        print("\n📂 Train Set - Question Type Distribution:")
-        for q_type, count in sorted(train_type_counts.items(), key=lambda x: -x[1]):
-            percentage = (count / len(train_data)) * 100
-            print(f"  - {q_type}: {count} ({percentage:.1f}%)")
+            print(f"\n📂 {name} Set - {key.replace('_', ' ').title()} Distribution:")
+            for value, count in sorted(counts.items(), key=lambda x: -x[1]):
+                percentage = (count / len(dataset)) * 100
+                print(f"  - {value}: {count} ({percentage:.1f}%)")
+        
+        print_distribution(train_data, "Train", "question_type")
+        print_distribution(val_data, "Validation", "question_type")
+        print_distribution(test_data, "Test", "question_type")
 
-        # Question type distribution in test
-        test_type_counts = {}
-        for item in test_data:
-            q_type = item.get("question_type", "unknown")
-            test_type_counts[q_type] = test_type_counts.get(q_type, 0) + 1
-
-        print("\n📂 Test Set - Question Type Distribution:")
-        for q_type, count in sorted(test_type_counts.items(), key=lambda x: -x[1]):
-            percentage = (count / len(test_data)) * 100
-            print(f"  - {q_type}: {count} ({percentage:.1f}%)")
-
-        # Difficulty distribution in train
-        train_diff_counts = {}
-        for item in train_data:
-            diff = item.get("difficulty", "unknown")
-            train_diff_counts[diff] = train_diff_counts.get(diff, 0) + 1
-
-        print("\n📊 Train Set - Difficulty Distribution:")
-        for diff, count in sorted(train_diff_counts.items()):
-            percentage = (count / len(train_data)) * 100
-            print(f"  - {diff}: {count} ({percentage:.1f}%)")
-
-        # Difficulty distribution in test
-        test_diff_counts = {}
-        for item in test_data:
-            diff = item.get("difficulty", "unknown")
-            test_diff_counts[diff] = test_diff_counts.get(diff, 0) + 1
-
-        print("\n📊 Test Set - Difficulty Distribution:")
-        for diff, count in sorted(test_diff_counts.items()):
-            percentage = (count / len(test_data)) * 100
-            print(f"  - {diff}: {count} ({percentage:.1f}%)")
+        print_distribution(train_data, "Train", "difficulty")
+        print_distribution(val_data, "Validation", "difficulty")
+        print_distribution(test_data, "Test", "difficulty")
 
 
 def main():
     """Main execution function."""
-    print("🚀 Starting Train/Test Split...")
+    print("🚀 Starting Train/Val/Test Split...")
 
     # Paths
     import os
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     input_path = os.path.join(project_root, "data", "processed", "training_data.jsonl")
     train_output_path = os.path.join(project_root, "data", "processed", "train.jsonl")
+    val_output_path = os.path.join(project_root, "data", "processed", "val.jsonl")
     test_output_path = os.path.join(project_root, "data", "processed", "test.jsonl")
 
-    # Initialize splitter
-    splitter = TrainTestSplitter(test_size=0.21, random_seed=42)
+    # Initialize splitter for 80/10/10 split
+    splitter = TrainTestSplitter(val_size=0.1, test_size=0.1, random_seed=42)
 
     # Load data
-    data = splitter.load_data(input_path)
-    print(f"✅ Loaded {len(data)} items")
+    try:
+        data = splitter.load_data(input_path)
+        print(f"✅ Loaded {len(data)} items from {input_path}")
+    except FileNotFoundError:
+        print(f"❌ Error: Input file not found at {input_path}")
+        return
 
     # Perform stratified split
     print("\n🔄 Performing stratified split by question type...")
-    train_data, test_data = splitter.stratified_split(data, stratify_key="question_type")
+    train_data, val_data, test_data = splitter.stratified_split(data, stratify_key="question_type")
 
     # Save splits
-    print("\n💾 Saving train and test sets...")
+    print("\n💾 Saving train, validation, and test sets...")
     splitter.save_to_jsonl(train_data, train_output_path)
+    splitter.save_to_jsonl(val_data, val_output_path)
     splitter.save_to_jsonl(test_data, test_output_path)
 
     # Print summary
-    splitter.print_summary(train_data, test_data)
+    splitter.print_summary(train_data, val_data, test_data)
 
-    print("\n✅ Train/test split completed!")
+    print("\n✅ Train/val/test split completed!")
 
 
 if __name__ == "__main__":
