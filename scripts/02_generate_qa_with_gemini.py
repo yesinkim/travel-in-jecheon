@@ -1,7 +1,7 @@
 """
-Q&A Generation Script using OpenAI GPT-4o API
+Q&A Generation Script using OpenAI gemini API
 
-This script generates question-answer pairs from document chunks using OpenAI GPT-4o API.
+This script generates question-answer pairs from document chunks using OpenAI gemini API.
 Generates diverse question types: factual, descriptive, recommendation, comparison, no-answer.
 
 Input: data/chunks/documents.jsonl
@@ -12,7 +12,8 @@ import json
 import os
 from pathlib import Path
 from typing import List, Dict, Any
-from openai import OpenAI
+# from openai import OpenAI
+import google.generativeai as genai
 from tqdm import tqdm
 import time
 from dotenv import load_dotenv
@@ -22,7 +23,7 @@ load_dotenv()
 
 
 class QAGenerator:
-    """Generates Q&A pairs using OpenAI GPT-4o API."""
+    """Generates Q&A pairs using OpenAI gemini API."""
 
     # Question type distribution (target percentages)
     QUESTION_DISTRIBUTION = {
@@ -48,11 +49,25 @@ class QAGenerator:
 
     def __init__(self, api_key: str = None):
         """Initialize QA generator with OpenAI API key."""
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set")
 
-        self.client = OpenAI(api_key=self.api_key)
+            # response = self.client.chat.completions.create(
+            #     model="gemini",
+            #     messages=[
+            #         {"role": "system", "content": "당신은 한국 관광 정보 데이터셋 생성 전문가입니다. 주어진 문서를 바탕으로 고품질의 질문-답변 쌍을 JSON 형식으로 생성합니다."},
+            #         {"role": "user", "content": prompt}
+            #     ],
+            #     max_tokens=4096,
+            #     temperature=0.7,
+            #     response_format={"type": "json_object"}
+
+        genai.configure(api_key=self.api_key)
+        self.model = genai.GenerativeModel(
+            model_name="gemini-2.5-pro",
+            generation_config={"temperature": 0.7, "max_output_tokens": 4096, "response_mime_type": "application/json"},
+        )
         self.qa_pairs = []
 
     def load_documents(self, documents_path: str) -> List[Dict[str, Any]]:
@@ -72,7 +87,8 @@ class QAGenerator:
     ) -> str:
         """Create prompt for Claude to generate Q&A pairs."""
 
-        prompt = f"""제천시 관광 정보를 바탕으로 RAG(Retrieval-Augmented Generation) 학습용 데이터셋을 만들어주세요.
+        prompt = f"""당신은 한국 관광 정보 데이터셋 생성 전문가입니다. 주어진 문서를 바탕으로 고품질의 질문-답변 쌍을 JSON 형식으로 생성합니다.
+        제천시 관광 정보를 바탕으로 RAG(Retrieval-Augmented Generation) 학습용 데이터셋을 만들어주세요.
 
 주어진 문서에서 {num_questions}개의 질문-답변 쌍을 생성해주세요.
 
@@ -97,7 +113,7 @@ class QAGenerator:
    - 정보가 없으면 "제공된 관광 정보에는 [주제]에 대한 내용이 없습니다" 형식으로 답변
 
    **중요: 추천/설명 질문 답변 시**
-   - 구체적인 내용을 포함해야 함 (코스, 장소명, 특징 등)
+   - 구체적인 내용을 포함해야 함 (위치, 코스, 장소명, 특징 등)
    - 단순히 할인이나 가격 정보만 언급하지 말 것
    - 예: "시티투어 추천해주세요" → 어떤 코스를 가는지, 어떤 장소를 방문하는지 설명
    - 예: "맛집 추천해주세요" → 어떤 음식점이 있는지, 어떤 메뉴가 있는지 설명
@@ -170,21 +186,11 @@ JSON 배열로 반환하되, 각 요소는 다음 형식:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": "당신은 한국 관광 정보 데이터셋 생성 전문가입니다. 주어진 문서를 바탕으로 고품질의 질문-답변 쌍을 JSON 형식으로 생성합니다."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=4096,
-                temperature=0.7,
-                response_format={"type": "json_object"}
-            )
 
-            response_text = response.choices[0].message.content
+            response = self.model.generate_content(prompt)
 
             # Parse JSON response
-            response_data = json.loads(response_text)
+            response_data = json.loads(response.text)
 
             # Handle different possible JSON structures
             if "qa_pairs" in response_data:
@@ -222,7 +228,7 @@ JSON 배열로 반환하되, 각 요소는 다음 형식:
     ) -> List[Dict[str, Any]]:
         """Generate Q&A pairs for all documents."""
 
-        print(f"\n🤖 Generating Q&A pairs using OpenAI GPT-4o API...")
+        print(f"\n🤖 Generating Q&A pairs using Gemini 2.5pro API...")
         print(f"Target: {target_total} Q&A pairs from {len(documents)} documents\n")
 
         all_qa = []
@@ -306,13 +312,13 @@ JSON 배열로 반환하되, 각 요소는 다음 형식:
 
 def main():
     """Main execution function."""
-    print("🚀 Starting Q&A Generation with OpenAI GPT-4o API...")
+    print("🚀 Starting Q&A Generation with OpenAI gemini API...")
 
     # Check for API key
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        print("\n❌ Error: OPENAI_API_KEY environment variable not set!")
-        print("Please set it using: export OPENAI_API_KEY='your-api-key'")
+        print("\n❌ Error: GOOGLE_API_KEY environment variable not set!")
+        print("Please set it using: export GOOGLE_API_KEY='your-api-key'")
         return
 
     # Paths
