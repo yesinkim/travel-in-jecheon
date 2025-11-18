@@ -52,7 +52,7 @@ class TrainingDataFormatter:
             all_docs.append({
                 "doc_id": qa["correct_doc"]["doc_id"],
                 "title": qa["correct_doc"]["title"],
-                "content": qa["correct_doc"]["content"],
+                "content": qa["correct_doc"]["text"],
                 "is_correct": True,
             })
 
@@ -60,7 +60,7 @@ class TrainingDataFormatter:
             all_docs.append({
                 "doc_id": distractor["doc_id"],
                 "title": distractor["title"],
-                "content": distractor["content"],
+                "content": distractor["text"],
                 "is_correct": False,
             })
 
@@ -133,12 +133,12 @@ class TrainingDataFormatter:
         hf_format = {
             "question": qa["question"],
             "answer": qa["answer"],
-            "content": correct_doc["content"] if correct_doc else "",
-            "filename": correct_doc["filename"] if correct_doc else "",
-            "fictitious_content1": distractors[0]["content"] if len(distractors) > 0 else "",
-            "fictitious_filename1": distractors[0]["filename"] if len(distractors) > 0 else "",
-            "fictitious_content2": distractors[1]["content"] if len(distractors) > 1 else "",
-            "fictitious_filename2": distractors[1]["filename"] if len(distractors) > 1 else "",
+            "content": correct_doc["text"] if correct_doc else "",
+            "filename": correct_doc.get("filename", "") if correct_doc else "",
+            "fictitious_content1": distractors[0]["text"] if len(distractors) > 0 else "",
+            "fictitious_filename1": distractors[0].get("filename", "") if len(distractors) > 0 else "",
+            "fictitious_content2": distractors[1]["text"] if len(distractors) > 1 else "",
+            "fictitious_filename2": distractors[1].get("filename", "") if len(distractors) > 1 else "",
             "question_type": qa["question_type"],
             "difficulty": qa["difficulty"],
         }
