@@ -13,7 +13,7 @@ Output:
 import json
 import random
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from collections import defaultdict
 
 
@@ -44,7 +44,7 @@ class TrainTestSplitter:
         self,
         data: List[Dict[str, Any]],
         stratify_key: str = "question_type"
-    ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         Perform stratified split to maintain distribution of question types.
 
@@ -159,9 +159,11 @@ def main():
     print("🚀 Starting Train/Test Split...")
 
     # Paths
-    input_path = "/home/user/goodganglabs/data/processed/training_data.jsonl"
-    train_output_path = "/home/user/goodganglabs/data/processed/train.jsonl"
-    test_output_path = "/home/user/goodganglabs/data/processed/test.jsonl"
+    import os
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    input_path = os.path.join(project_root, "data", "processed", "training_data.jsonl")
+    train_output_path = os.path.join(project_root, "data", "processed", "train.jsonl")
+    test_output_path = os.path.join(project_root, "data", "processed", "test.jsonl")
 
     # Initialize splitter
     splitter = TrainTestSplitter(test_size=0.21, random_seed=42)

@@ -13,7 +13,7 @@ Output:
 import json
 import random
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 
 class TrainingDataFormatter:
@@ -148,7 +148,7 @@ class TrainingDataFormatter:
     def format_all_data(
         self,
         format_style: str = "xml"
-    ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         Format all Q&A pairs.
 
@@ -228,9 +228,11 @@ def main():
     print("🚀 Starting Training Data Formatting...")
 
     # Paths
-    input_path = "/home/user/goodganglabs/data/chunks/qa_with_distractors.jsonl"
-    output_instruction_path = "/home/user/goodganglabs/data/processed/training_data.jsonl"
-    output_hf_path = "/home/user/goodganglabs/data/processed/dataset_hf.jsonl"
+    import os
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    input_path = os.path.join(project_root, "data", "chunks", "qa_with_distractors.jsonl")
+    output_instruction_path = os.path.join(project_root, "data", "processed", "training_data.jsonl")
+    output_hf_path = os.path.join(project_root, "data", "processed", "dataset_hf.jsonl")
 
     # Initialize formatter
     formatter = TrainingDataFormatter()

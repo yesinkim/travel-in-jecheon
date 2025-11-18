@@ -22,7 +22,7 @@ from collections import defaultdict
 class DistractorAdder:
     """Adds distractor documents to Q&A pairs for RAG fine-tuning."""
 
-    def __init__(self, num_distractors: int = 2, hard_ratio: float = 0.5):
+    def __init__(self, num_distractors: int = 2):
         """
         Initialize distractor adder.
 
@@ -30,23 +30,25 @@ class DistractorAdder:
 
         Args:
             num_distractors: Number of distractor documents to add per Q&A (default: 2)
-            hard_ratio: Ratio of hard distractors (same category, default: 0.5 = 1 hard + 1 easy)
         """
         self.num_distractors = num_distractors
-        self.hard_ratio = hard_ratio
         self.documents = []
         self.qa_pairs = []
         self.docs_by_category = defaultdict(list)
 
-    def load_documents(self, documents_path: str) -> List[Dict[str, Any]]:
-        """Load document chunks from JSONL file."""
+    def load_documents(self, documents_paths: List[str]) -> List[Dict[str, Any]]:
+        """Load document chunks from a list of JSONL files."""
         documents = []
-        with open(documents_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                doc = json.loads(line)
-                documents.append(doc)
-                # Index by category for efficient retrieval
-                self.docs_by_category[doc["category"]].append(doc)
+        for path in documents_paths:
+            with open(path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    doc = json.loads(line)
+                    # Ensure content field is consistent
+                    if "content" in doc and "text" not in doc:
+                        doc["text"] = doc.pop("content")
+                    documents.append(doc)
+                    # Index by category for efficient retrieval
+                    self.docs_by_category[doc["category"]].append(doc)
 
         self.documents = documents
         return documents
@@ -64,66 +66,32 @@ class DistractorAdder:
     def select_distractors(
         self,
         correct_doc_id: str,
-        doc_category: str,
+        doc_category: str, # Kept for signature consistency, but no longer used in logic
         num_distractors: int
     ) -> List[Dict[str, Any]]:
         """
-        Select distractor documents for a Q&A pair.
-
-        Strategy:
-        - Hard distractors (30%): Same category as correct document
-        - Easy distractors (70%): Different categories
+        Select distractor documents for a Q&A pair by randomly choosing
+        from all documents, excluding the correct document.
         """
-        distractors = []
-
-        # Calculate number of hard vs easy distractors
-        num_hard = int(num_distractors * self.hard_ratio)
-        num_easy = num_distractors - num_hard
-
-        # 1. Select hard distractors (same category, but different doc)
-        same_category_docs = [
-            doc for doc in self.docs_by_category[doc_category]
+        # Create a pool of all documents excluding the correct one
+        available_distractors = [
+            doc for doc in self.documents
             if doc["doc_id"] != correct_doc_id
         ]
 
-        if same_category_docs and num_hard > 0:
-            hard_distractors = random.sample(
-                same_category_docs,
-                min(num_hard, len(same_category_docs))
-            )
-            distractors.extend(hard_distractors)
-
-        # 2. Select easy distractors (different categories)
-        different_category_docs = [
-            doc for doc in self.documents
-            if doc["category"] != doc_category and doc["doc_id"] != correct_doc_id
-        ]
-
-        if different_category_docs and num_easy > 0:
-            easy_distractors = random.sample(
-                different_category_docs,
-                min(num_easy, len(different_category_docs))
-            )
-            distractors.extend(easy_distractors)
-
-        # 3. If we don't have enough distractors, fill with random docs
-        while len(distractors) < num_distractors:
-            remaining_docs = [
-                doc for doc in self.documents
-                if doc["doc_id"] != correct_doc_id
-                and doc not in distractors
-            ]
-            if not remaining_docs:
-                break
-            distractors.append(random.choice(remaining_docs))
+        # If there are enough available distractors, select randomly
+        if len(available_distractors) >= num_distractors:
+            distractors = random.sample(available_distractors, num_distractors)
+        else:
+            # If not enough unique distractors, return all available unique ones
+            distractors = available_distractors
+            print(f"⚠️ Warning: Not enough unique distractors available for {correct_doc_id}. Selected {len(distractors)} instead of {num_distractors}.")
 
         return distractors
 
     def add_distractors_to_qa(self) -> List[Dict[str, Any]]:
         """Add distractor documents to all Q&A pairs."""
-        print(f"\n🎯 Adding {self.num_distractors} distractors per Q&A pair (Finetune-RAG standard)...")
-        print(f"  - Hard distractors (same category): {int(self.num_distractors * self.hard_ratio)}")
-        print(f"  - Easy distractors (different category): {self.num_distractors - int(self.num_distractors * self.hard_ratio)}")
+        print(f"\n🎯 Adding {self.num_distractors} random distractors per Q&A pair...")
         print(f"  - Total documents per Q&A: {self.num_distractors + 1} (1 correct + {self.num_distractors} distractors)\n")
 
         qa_with_distractors = []
@@ -150,7 +118,7 @@ class DistractorAdder:
                 # Select distractors
                 distractors = self.select_distractors(
                     correct_doc_id=qa["doc_id"],
-                    doc_category=qa["doc_category"],
+                    doc_category=qa["doc_category"], # Kept for signature consistency
                     num_distractors=self.num_distractors
                 )
 
@@ -228,16 +196,24 @@ def main():
     print("🚀 Starting Distractor Addition...")
 
     # Paths
-    documents_path = "/home/user/goodganglabs/data/chunks/documents.jsonl"
-    qa_path = "/home/user/goodganglabs/data/chunks/qa_pairs.jsonl"
-    output_path = "/home/user/goodganglabs/data/chunks/qa_with_distractors.jsonl"
+    import os
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    # List of document paths to load
+    document_paths = [
+        os.path.join(project_root, "data", "chunks", "documents.jsonl"),
+        os.path.join(project_root, "data", "chunks", "external_documents.jsonl")
+    ]
+    
+    qa_path = os.path.join(project_root, "data", "chunks", "qa_pairs.jsonl")
+    output_path = os.path.join(project_root, "data", "chunks", "qa_with_distractors.jsonl")
 
     # Initialize distractor adder (Finetune-RAG standard: 2 distractors)
-    adder = DistractorAdder(num_distractors=2, hard_ratio=0.5)
+    adder = DistractorAdder(num_distractors=2)
 
     # Load documents and Q&A pairs
-    documents = adder.load_documents(documents_path)
-    print(f"✅ Loaded {len(documents)} documents")
+    documents = adder.load_documents(document_paths)
+    print(f"✅ Loaded {len(documents)} documents from {len(document_paths)} files")
 
     qa_pairs = adder.load_qa_pairs(qa_path)
     print(f"✅ Loaded {len(qa_pairs)} Q&A pairs")
