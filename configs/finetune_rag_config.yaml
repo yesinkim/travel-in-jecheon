@@ -1,0 +1,169 @@
+# Finetune-RAG Configuration for KANANA1.5-8B
+# Based on: "Finetune-RAG: Fine-Tuning Language Models to Resist Hallucination in RAG"
+
+# Model Configuration
+model:
+  name: "kakaocorp/kanana-1.5-8b-base"
+  # Use instruct version if available: "kakaocorp/kanana-1.5-8b-instruct-2505"
+  type: "causal_lm"
+  trust_remote_code: false
+  use_flash_attention_2: true  # Enable if supported
+  torch_dtype: "bfloat16"  # KANANA1.5 uses BF16
+
+# QLoRA Configuration (Efficient Fine-tuning)
+qlora:
+  enabled: true
+  # 4-bit quantization for memory efficiency
+  load_in_4bit: true
+  bnb_4bit_compute_dtype: "bfloat16"
+  bnb_4bit_quant_type: "nf4"  # NormalFloat4
+  bnb_4bit_use_double_quant: true  # Nested quantization
+
+  # LoRA parameters (based on QLoRA paper recommendations)
+  lora_r: 16  # Rank (can be 8, 16, 32, 64)
+  lora_alpha: 32  # Scaling factor (typically 2x rank)
+  lora_dropout: 0.05
+  # Target modules for KANANA (Llama-based architecture)
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
+# Training Configuration
+training:
+  # Output directory
+  output_dir: "./models/kanana-finetune-rag"
+
+  # Epochs and steps
+  num_train_epochs: 3
+  max_steps: -1  # -1 means use num_train_epochs
+
+  # Batch sizes
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8  # Effective batch size = 2 * 8 = 16
+
+  # Learning rate
+  learning_rate: 2.0e-4  # QLoRA typically uses higher LR than full fine-tuning
+  warmup_ratio: 0.03
+  lr_scheduler_type: "cosine"
+
+  # Optimization
+  optim: "paged_adamw_32bit"  # Memory-efficient optimizer for QLoRA
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+
+  # Precision
+  bf16: true  # Use BF16 (recommended for KANANA1.5)
+  fp16: false
+
+  # Logging
+  logging_steps: 10
+  logging_first_step: true
+
+  # Evaluation
+  evaluation_strategy: "steps"
+  eval_steps: 50
+  save_strategy: "steps"
+  save_steps: 50
+  save_total_limit: 3
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+  greater_is_better: false
+
+  # Early stopping (prevents overfitting)
+  early_stopping_patience: 3
+  early_stopping_threshold: 0.0
+
+  # Checkpointing
+  save_safetensors: true
+
+  # Misc
+  seed: 42
+  dataloader_num_workers: 4
+  remove_unused_columns: false
+  group_by_length: false  # Set true if examples vary in length
+
+  # Gradient checkpointing (saves memory)
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
+
+# Dataset Configuration
+dataset:
+  # Path to prepared dataset
+  train_dataset_path: "data/processed/finetune_rag_dataset"
+  eval_dataset_path: null  # If null, will use train/test split from train_dataset_path
+
+  # Data format
+  use_chat_template: true  # Use model's chat template
+  xml_format: true  # Use XML-structured format (recommended by Finetune-RAG paper)
+
+  # Max sequence length
+  max_seq_length: 2048  # KANANA1.5 supports up to 32K, but 2K is efficient for fine-tuning
+
+  # Data loading
+  streaming: false
+  num_proc: 4
+
+# Finetune-RAG Specific Settings
+finetune_rag:
+  # System prompt
+  system_prompt: |
+    당신은 제공된 문맥(context)을 바탕으로 질문에 답변하는 AI 어시스턴트입니다.
+    문맥에 답변이 포함되어 있다면 정확하게 답변하고,
+    문맥에 답변이 없다면 '제공된 정보에서 답변을 찾을 수 없습니다'라고 답변하세요.
+
+  # Ratio of unanswerable questions (prevents hallucination)
+  unanswerable_ratio: 0.15
+
+  # Evaluation prompts for testing hallucination resistance
+  eval_prompts:
+    - question: "의림지의 위치는?"
+      context: "의림지는 제천시 송학면에 위치한 역사적인 저수지입니다."
+      expected_type: "answerable"
+
+    - question: "의림지 입장료는?"
+      context: "의림지는 제천시 송학면에 위치한 역사적인 저수지입니다."
+      expected_type: "unanswerable"
+
+# Weights & Biases (W&B) Configuration
+wandb:
+  enabled: true
+  project: "kanana-finetune-rag"
+  name: "kanana-1.5-8b-finetune-rag-v1"
+  entity: null  # Your W&B username or team
+  tags:
+    - "finetune-rag"
+    - "kanana-1.5-8b"
+    - "qlora"
+    - "jecheon-tourism"
+  notes: "Fine-tuning KANANA1.5-8B with Finetune-RAG methodology for Jecheon tourism RAG system"
+
+# Inference Configuration (for testing)
+inference:
+  max_new_tokens: 512
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 50
+  repetition_penalty: 1.1
+  do_sample: true
+
+# Hardware Configuration
+hardware:
+  # Recommended GPU: RTX 4090 (24GB), A40 (48GB), or A100 (40GB/80GB)
+  auto_find_batch_size: false
+  device_map: "auto"  # Automatically distribute model across available GPUs
+
+# Push to HuggingFace Hub
+hub:
+  push_to_hub: false  # Set true when ready to upload
+  hub_model_id: "your-username/kanana-1.5-8b-finetune-rag-jecheon"
+  hub_strategy: "every_save"
+  hub_private_repo: false
