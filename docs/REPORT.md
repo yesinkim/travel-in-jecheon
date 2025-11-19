@@ -341,7 +341,7 @@ goodganglabs/
 
 ### 7.3 향후 개선 방안
 
-1.  **Baseline 모델 교체**: Instruction Following 성능이 검증된 `Gemma-2-9B-It` 또는 `Llama-3.1-8B-Instruct` 모델로 변경하여 재시도합니다.
+1.  **Baseline 모델 교체**: Instruction Following 성능이 검증된 `Gemma-2-9B-It` 또는 `Llama-3.1-8B-Instruct` 모델로 변경하여 재시도하려고 합니다. `Gemma2`를 시도하려고 했으나, 시간부족으로 환경 오류를 제대로 확인하지 못하고 넘어간 것이 아쉽습니다.
 2.  **프롬프트 엔지니어링 단순화**: 모델이 Task를 오해하지 않도록 RAG 프롬프트를 더욱 명확하고 단순하게(Chat Template 준수) 수정합니다.
 3.  **단계별 디버깅**: Retrieval(검색) 정확도와 Generation(생성) 정확도를 분리하여 평가하는 파이프라인을 구축합니다.
 
