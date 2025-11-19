@@ -1,0 +1,39 @@
+{
+  "os": "Linux-6.5.0-28-generic-x86_64-with-glibc2.39",
+  "python": "CPython 3.12.3",
+  "startedAt": "2025-11-19T05:07:19.637063Z",
+  "program": "workspace/goodganglabs/notebooks/finetuning_kanana_RAG.ipynb",
+  "codePath": "workspace/goodganglabs/notebooks/finetuning_kanana_RAG.ipynb",
+  "git": {
+    "remote": "git@github.com:yesinkim/goodganglabs.git",
+    "commit": "6021f5d48ed913aca29c8607e22a4f77ebbcb15e"
+  },
+  "email": "bailando.ys@gmail.com",
+  "root": "/workspace/goodganglabs/notebooks",
+  "host": "2c64c1263936",
+  "executable": "/usr/local/bin/python",
+  "cpu_count": 128,
+  "cpu_count_logical": 255,
+  "gpu": "NVIDIA A100-SXM4-80GB",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "107374182400",
+      "used": "958058496"
+    }
+  },
+  "memory": {
+    "total": "1081976471552"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-47e8ae51-e55f-26ce-c579-8c0291a8e4b7"
+    }
+  ],
+  "cudaVersion": "12.7",
+  "writerId": "zzcoav7ldncb4oc7dqhgpxaqhwdk2bmy"
+}
