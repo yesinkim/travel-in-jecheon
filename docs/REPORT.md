@@ -162,8 +162,8 @@ RAG 시스템의 성능은 데이터 품질에 종속된다고 판단하여, 정
 RAG의 검색 정확도를 담당할 임베딩 모델로는 **`intfloat/multilingual-e5-large`**를 선정했습니다.
 *   **이유**: MTEB 리더보드 상위권에 위치하며, 한국어를 포함한 다국어 처리 능력이 우수하여 '제천', '의림지' 등 고유명사 검색에 유리하다고 판단했습니다.
 
-
-[https://github.com/yesinkim/travel-in-jecheon/blob/main/compare_model/data](https://github.com/yesinkim/travel-in-jecheon/blob/main/compare_model/data) 에서 전체 모델(llm)의 실험데이터를 확인할 수 있습니다.
+*   **전체 모델 실험데이터**: 아래의 링크에서 전체 모델의 테스트 내용을 확인할 수 있습니다.
+[https://github.com/yesinkim/travel-in-jecheon/blob/main/compare_model/data](https://github.com/yesinkim/travel-in-jecheon/blob/main/compare_model/data)
 ---
 
 ### 3.2 평가 메트릭 선정 및 근거
