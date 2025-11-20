@@ -234,7 +234,7 @@ def main():
                     d = json.loads(line)
                     doc_map[d['doc_id']] = d
         
-        evaluator = ComprehensiveRAGEvaluator(gemini_model="gemini-2.0-flash-exp")
+        evaluator = ComprehensiveRAGEvaluator(gemini_model="gemini-2.5-pro")
     except Exception as e:
         print(f"⚠️ Evaluator 초기화 중 경고: {e}")
         evaluator = None
