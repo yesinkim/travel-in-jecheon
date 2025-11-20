@@ -110,7 +110,6 @@ def load_or_create_vectorstore():
 # LangGraph State
 class RAGState(TypedDict):
     question: str
-    retrieved_docs: List[Document]
     context: str
     answer: str
 
@@ -127,7 +126,6 @@ MODEL_CONFIGS = {
     "Rag-jecheon": {
         "name": "bailando/kanana-jecheon",
         "dtype": torch.bfloat16, 
-        "model_type": "gpt_neox",
     }
 }
 
@@ -179,24 +177,28 @@ def create_rag_app(vectorstore, model_key):
     # 2. 노드 정의 (이 부분이 함수 밖으로 나오지 않고 내부에 있어야 합니다)
     def retrieve_node(state: RAGState):
         docs = retriever.invoke(state["question"])
-        context_text = "\n\n".join([f"[문서 {i+1}: {d.metadata['title']}]\n{d.page_content}" for i, d in enumerate(docs)])
-        return {"retrieved_docs": docs, "context": context_text}
+        return {"context": docs}
 
     def generate_node(state: RAGState):
         # [중요] state에서 변수를 꺼내야 NameError가 안 납니다.
-        context = state["context"]
         question = state["question"]
+        context = state["context"]
         
-        prompt = f"""당신은 제천시 관광 안내 전문가입니다. 
-제공된 문서 내용을 바탕으로 질문에 정확하고 친절하게 답변해주세요.
+#         prompt = f"""당신은 제천시 관광 안내 전문가입니다. 
+# 제공된 문서 내용을 바탕으로 질문에 정확하고 친절하게 답변해주세요.
 
-문서 내용:
-{context}
+# 문서 내용:
+# {context}
 
-질문: {question}
+# 질문: {question}
 
-답변:"""
-        response = llm.invoke(prompt)
+# 답변:"""
+
+        from langchain import hub
+
+        prompt = hub.pull("rlm/rag-prompt")
+        rag_chain = prompt | llm
+        response = rag_chain.invoke({"question": question, "context": context})
         return {"answer": response}
 
     # 3. 그래프 생성
@@ -295,7 +297,9 @@ def main():
                 "rougeL": metrics.get("rougeL", 0),
                 "bert_f1": metrics.get("bert_f1", 0),
                 "judge_accuracy": metrics.get("accuracy"),
-                "judge_helpfulness": metrics.get("helpfulness")
+                "judge_helpfulness": metrics.get("helpfulness"),
+                "judge_relevance": metrics.get("relevance"),
+                "judge_depth": metrics.get("depth")
             }
             results.append(row)
             
